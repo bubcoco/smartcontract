@@ -20,3 +20,7 @@
 /coverage
 
 .env
+
+script.txt
+
+deploy.sh

@@ -20,6 +20,11 @@
     "typescript": "~5.8.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0"
+    "@chainlink/contracts": "^1.5.0",
+    "@chainlink/contracts-dev": "npm:@chainlink/contracts@^1.1.0",
+    "@openzeppelin/contracts-upgradeable": "5.0.2",
+    "@openzeppelin/contracts-upgradeable-v4": "npm:@openzeppelin/contracts-upgradeable@^4.5.1",
+    "@openzeppelin/contracts-v46": "npm:@openzeppelin/contracts@4.6.0",
+    "@openzeppelin/contracts-v48": "npm:@openzeppelin/contracts@4.8.3"
   }
 }

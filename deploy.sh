@@ -99,12 +99,30 @@ Deploy() {
     if [ "$valid" = false ]; then
         Error "Deploy required flag [-n, -t] is missing"
     fi
+    
+    # MODIFIED: Command changed for Hardhat Ignition
+    local module_path="ignition/modules/${tags}.ts"
+    if [ ! -f "$module_path" ]; then
+        Error "Deployment module not found at: $module_path"
+    fi
 
-    echo "Deploying tags $tags on network $network"
-    # Retrieve address behind space of first line from second last line of deploy log
-    deployed=$(npx hardhat --network $network deploy --tags $tags | tail -n2 | head -n1 | tee /dev/tty)
-    address=${deployed#* }
+    echo "Deploying module $tags ($module_path) on network $network"
+    
+    # MODIFIED: New command and more robust address parsing for Ignition's output
+    # Hardhat Ignition output looks like: ✔ "MyContract" deployed as MyModule#MyContract to 0x...
+    # We grep for the line with the module name and grab the last word.
+    # The 'tee /dev/tty' command ensures the output is still shown to the user in real-time.
+    deploy_output=$(npx hardhat ignition deploy --network $network "$module_path" | tee /dev/tty)
+    deployed_address=$(echo "$deploy_output" | grep "deployed as .*$tags" | awk '{print $NF}')
+
+    if [ -z "$deployed_address" ]; then
+        Error "Could not parse deployed address from Ignition output."
+    fi
+
+    address=$deployed_address
     Write "$tags" "$address"
+    echo
+    echo "Successfully deployed and wrote address to $file"
     echo
 }
 
