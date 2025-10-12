@@ -3,6 +3,14 @@ import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { configVariable } from "hardhat/config";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
+// import "hardhat-deploy";
+// import "@nomicfoundation/hardhat-chai-matchers";
+// import "@nomicfoundation/hardhat-ignition";
+// import "@nomicfoundation/hardhat-verify";
+// import "@openzeppelin/hardhat-upgrades";
+// import "@typechain/hardhat";
+// import "hardhat-deploy";
+// import "solidity-coverage";
 // import dotenv from "dotenv";
 // dotenv.config();
 

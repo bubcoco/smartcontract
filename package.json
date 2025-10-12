@@ -16,6 +16,7 @@
     "ethers": "^6.15.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
     "hardhat": "^3.0.4",
+    "hardhat-deploy": "^1.0.4",
     "mocha": "^11.7.2",
     "typescript": "~5.8.0"
   },
