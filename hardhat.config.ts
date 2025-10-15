@@ -3,19 +3,18 @@ import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { configVariable } from "hardhat/config";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
-// import "hardhat-deploy";
-// import "@nomicfoundation/hardhat-chai-matchers";
-// import "@nomicfoundation/hardhat-ignition";
-// import "@nomicfoundation/hardhat-verify";
-// import "@openzeppelin/hardhat-upgrades";
-// import "@typechain/hardhat";
-// import "hardhat-deploy";
-// import "solidity-coverage";
-// import dotenv from "dotenv";
-// dotenv.config();
+import { config as dotenvConfig } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 
+// Recreate __dirname for ES modules
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = dirname(__filename);
 
-const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
+// dotenvConfig({ path: resolve(__dirname, "./.env") });
+
+// const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
+// const SCAN_API_KEY = process.env.SCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxMochaEthersPlugin,
@@ -24,10 +23,10 @@ const config: HardhatUserConfig = {
   ],
   verify: {
     blockscout: {
-      enabled: false,
+      enabled: true,
     },
     etherscan: {
-      apiKey: "ARP3CNAQR8KAU94MZUACPH12HAMSZEWP6F",
+      apiKey: configVariable("SCAN_API_KEY"),
       enabled: true,
     },
 
@@ -57,6 +56,11 @@ const config: HardhatUserConfig = {
           url: "https://rpc-amoy.polygon.technology/",
           apiUrl: "https://polygon-amoy.g.alchemy.com/v2/",
         },
+        blockscout: {
+          name: "amoy",
+          url: "https://amoy.polygonscan.com/",
+          apiUrl: "https://api-amoy.polygonscan.com/api",
+        },
         // other explorers...
       },
     },
@@ -74,7 +78,7 @@ const config: HardhatUserConfig = {
       type: "http",
       url: "https://rpc-amoy.polygon.technology/",
       chainId: 80002,
-      // accounts: WALLET_PRIVATE_KEY ? [`0x$WALLET_PRIVATE_KEY`] : [],
+      // accounts: WALLET_PRIVATE_KEY ? [$WALLET_PRIVATE_KEY] : [],
       accounts: [configVariable("WALLET_PRIVATE_KEY")],
     },
     sepolia: {

@@ -26,6 +26,7 @@
     "@openzeppelin/contracts-upgradeable": "5.0.2",
     "@openzeppelin/contracts-upgradeable-v4": "npm:@openzeppelin/contracts-upgradeable@^4.5.1",
     "@openzeppelin/contracts-v46": "npm:@openzeppelin/contracts@4.6.0",
-    "@openzeppelin/contracts-v48": "npm:@openzeppelin/contracts@4.8.3"
+    "@openzeppelin/contracts-v48": "npm:@openzeppelin/contracts@4.8.3",
+    "dotenv": "^17.2.3"
   }
 }
