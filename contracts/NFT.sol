@@ -73,8 +73,7 @@ contract NFT is
         assert(mintIds.length == quantity);
         
         require(quantity > 0);
-        // require(quantity <= maxMintAmount, "NakaPunk.sol: Max mint at 5.");
-        require(supply <= _maxSupplies, "NakaPunk.sol: Max limit.");
+        require(supply <= _maxSupplies, "NFT.sol: Max limit.");
 
         // uint256 id = tokenIds.current();
 
