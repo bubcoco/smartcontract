@@ -18,6 +18,10 @@ contract ExpireNFT is ERC721, Ownable {
     // Track index of token in owner's array
     mapping(uint256 => uint256) private _ownedTokensIndex;
     
+    // OPTIMIZATION: Track available token IDs for efficient random minting
+    uint256[] private _availableTokens;
+    mapping(uint256 => uint256) private _availableTokensIndex;
+    
     // Base URI for metadata
     string private _baseTokenURI;
     
@@ -46,6 +50,19 @@ contract ExpireNFT is ERC721, Ownable {
         activityStart = block.timestamp;
         // Default: no end date (transfers always allowed)
         activityEnd = type(uint256).max;
+        
+        // OPTIMIZATION: Initialize available tokens array
+        _initializeAvailableTokens();
+    }
+    
+    /**
+     * @dev Initialize the available tokens array with all token IDs
+     */
+    function _initializeAvailableTokens() private {
+        for (uint256 i = 0; i < MAX_SUPPLY; i++) {
+            _availableTokens.push(i);
+            _availableTokensIndex[i] = i;
+        }
     }
 
     /**

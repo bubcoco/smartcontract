@@ -6,15 +6,7 @@ import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import { config as dotenvConfig } from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
-
-// Recreate __dirname for ES modules
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = dirname(__filename);
-
-// dotenvConfig({ path: resolve(__dirname, "./.env") });
-
-// const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
-// const SCAN_API_KEY = process.env.SCAN_API_KEY || "";
+dotenvConfig({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env") });
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxMochaEthersPlugin,
@@ -27,7 +19,17 @@ const config: HardhatUserConfig = {
     },
     etherscan: {
       apiKey: configVariable("SCAN_API_KEY"),
-      enabled: true,
+      // apiKey: process.env.SCAN_API_KEY,
+      customChains: [
+    {
+      network: "amoy",
+      chainId: 80002,
+      urls: {
+        apiURL: "https://api.etherscan.io/v2/api",
+        browserURL: "https://amoy.polygonscan.com/"
+      }
+    },
+  ]
     },
 
   },
@@ -50,16 +52,17 @@ const config: HardhatUserConfig = {
   chainDescriptors: {
     80002: {
       name: "amoy",
+      chainId: 80002,
       blockExplorers: {
         etherscan: {
           name: "amoy",
-          url: "https://rpc-amoy.polygon.technology/",
+          url: "https://amoy.polygonscan.com",
           apiUrl: "https://polygon-amoy.g.alchemy.com/v2/",
         },
         blockscout: {
           name: "amoy",
           url: "https://amoy.polygonscan.com/",
-          apiUrl: "https://api-amoy.polygonscan.com/api",
+          apiUrl: "https://api.etherscan.io/v2/api",
         },
         // other explorers...
       },
