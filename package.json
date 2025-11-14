@@ -2,6 +2,18 @@
   "name": "smartcontract",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "test:coverage": "hardhat coverage",
+    "test:watch": "hardhat watch test",
+    "test:specific": "hardhat test test/ExpireNFT.test.ts",
+    "test:foundry": "forge test",
+    "test:foundry:gas": "forge test --gas-report",
+    "test:foundry:coverage": "forge coverage",
+    "test:foundry:verbose": "forge test -vvv",
+    "test:all": "npm run test && npm run test:foundry"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.2",
     "@nomicfoundation/hardhat-keystore": "^3.0.1",
@@ -19,6 +31,7 @@
     "hardhat-deploy": "^1.0.4",
     "mocha": "^11.7.2",
     "typescript": "~5.8.0"
+    
   },
   "dependencies": {
     "@chainlink/contracts": "^1.5.0",
