@@ -31,7 +31,6 @@
     "hardhat-deploy": "^1.0.4",
     "mocha": "^11.7.2",
     "typescript": "~5.8.0"
-    
   },
   "dependencies": {
     "@chainlink/contracts": "^1.5.0",
