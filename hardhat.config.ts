@@ -6,6 +6,7 @@ import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import { config as dotenvConfig } from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { network } from "hardhat";
 dotenvConfig({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env") });
 
 const config: HardhatUserConfig = {
@@ -18,20 +19,42 @@ const config: HardhatUserConfig = {
       enabled: true,
     },
     etherscan: {
-      apiKey: configVariable("SCAN_API_KEY"),
-      // apiKey: process.env.SCAN_API_KEY,
-      customChains: [
-    {
-      network: "amoy",
-      chainId: 80002,
-      urls: {
-        apiURL: "https://api.etherscan.io/v2/api",
-        browserURL: "https://amoy.polygonscan.com/"
-      }
-    },
-  ]
-    },
 
+     apiKey: "SCAN_API_KEY",
+     chainDescriptors: {
+    235: {
+      name: "loaffinity",
+      blockExplorers: {
+        etherscan: {
+          name: "Loaffinity Explorer",
+          url: "http://localhost",
+          apiUrl: "http://localhost:4000/api",
+        },
+        blockscout: {
+          name: "Loaffinity Explorer",
+          url: "http://localhost",
+          apiUrl: "http://localhost:4000/api",
+        },
+      },
+    },
+    80002: {
+      name: "amoy",
+      blockExplorers: {
+        etherscan: {
+          name: "amoy",
+          url: "https://amoy.polygonscan.com",
+          apiUrl: "https://polygon-amoy.g.alchemy.com/v2/",
+        },
+        blockscout: {
+          name: "amoy",
+          url: "https://amoy.polygonscan.com/",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        },
+        // other explorers...
+      },
+    },
+  },
+    },
   },
   solidity: {
     profiles: {
@@ -50,9 +73,23 @@ const config: HardhatUserConfig = {
     },
   },
   chainDescriptors: {
+    235: {
+      name: "loaffinity",
+      blockExplorers: {
+        etherscan: {
+          name: "Loaffinity Explorer",
+          url: "http://localhost",
+          apiUrl: "http://localhost:4000/api",
+        },
+        blockscout: {
+          name: "Loaffinity Explorer",
+          url: "http://localhost",
+          apiUrl: "http://localhost:4000/api",
+        },
+      },
+    },
     80002: {
       name: "amoy",
-      chainId: 80002,
       blockExplorers: {
         etherscan: {
           name: "amoy",
@@ -82,13 +119,22 @@ const config: HardhatUserConfig = {
       url: "https://rpc-amoy.polygon.technology/",
       chainId: 80002,
       // accounts: WALLET_PRIVATE_KEY ? [$WALLET_PRIVATE_KEY] : [],
-      accounts: [configVariable("WALLET_PRIVATE_KEY")],
+      accounts: [configVariable("PRIV_KEY")],
     },
     sepolia: {
       type: "http",
       chainType: "l1",
       url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("PRIV_KEY")],
+    },
+    loaffinity: {
+      type: "http",
+      chainId: 235,
+      chainType: "l1",
+      accounts: [configVariable("PRIV_KEY")],
+      url: 'http://localhost:8545',
+      gasPrice: 0,
+      gas: 8000000,
     },
   },
 };
