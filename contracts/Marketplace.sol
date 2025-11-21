@@ -350,7 +350,7 @@ contract Marketplace is Ownable, ReentrancyGuard, Pausable, ERC721Holder, ERC115
         uint256 sellerAmount = totalPrice - platformFeeAmount;
         
         // Process payments
-        _processPayments(paymentSplits, totalPrice, listing.seller, platformFeeAmount, sellerAmount);
+        _processPayments(paymentSplits, listing.seller, platformFeeAmount, sellerAmount);
         
         // Transfer NFT
         if (listing.isERC721) {
@@ -406,7 +406,6 @@ contract Marketplace is Ownable, ReentrancyGuard, Pausable, ERC721Holder, ERC115
      */
     function _processPayments(
         PaymentSplit[] memory splits,
-        uint256 totalPrice,
         address seller,
         uint256 platformFeeAmount,
         uint256 sellerAmount
@@ -415,7 +414,6 @@ contract Marketplace is Ownable, ReentrancyGuard, Pausable, ERC721Holder, ERC115
             address token = splits[i].token;
             uint256 percentage = splits[i].percentage;
             
-            uint256 tokenAmount = (totalPrice * percentage) / BASIS_POINTS;
             uint256 tokenFee = (platformFeeAmount * percentage) / BASIS_POINTS;
             uint256 tokenSeller = (sellerAmount * percentage) / BASIS_POINTS;
             

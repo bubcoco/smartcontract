@@ -1,0 +1,14 @@
+
+WARNING: You are using Node.js 25.1.0 which is not supported by Hardhat.
+Please upgrade to 22.10.0 or a later LTS version (even major version number)
+
+[dotenv@17.2.3] injecting env (0) from ../.env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+Nothing to compile
+Nothing to compile
+
+[dotenv@17.2.3] injecting env (2) from .env -- tip: ⚙️  override existing env vars with { override: true }
+.env loaded successfully from /Users/entronica/Desktop/Coding/smartcontract/.env
+PRIV_KEY exists: true
+Deploying contracts with the account: 0xAe76b11CEcE311717934938510327203a373E826
+Token deployment transaction sent: 0x6e5fb0a3f1f7b5343b17c807dba5b87656e8623f07ff53af5ec5925ec5918c94
+Token deployed to: 0x1211d530a993A1a8B7C379A5363122c8091fA193

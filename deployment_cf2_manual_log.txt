@@ -1,0 +1,12 @@
+
+WARNING: You are using Node.js 25.1.0 which is not supported by Hardhat.
+Please upgrade to 22.10.0 or a later LTS version (even major version number)
+
+[dotenv@17.2.3] injecting env (0) from ../.env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+Nothing to compile
+Nothing to compile
+
+[dotenv@17.2.3] injecting env (2) from .env -- tip: ⚙️  override existing env vars with { override: true }
+Deploying ContractFactory2 with the account: 0xAe76b11CEcE311717934938510327203a373E826
+ContractFactory2 deployment transaction sent: 0x00aaaf47b8ae708cb8098ffec56ef6e0ef26c46c9f830ea8e7f3c8584a00a586
+ContractFactory2 deployed to: 0x9d9Cc14Bb09781f81fD8fFeDd55606Be8eCbfb2a

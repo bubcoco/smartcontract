@@ -1,0 +1,13 @@
+
+WARNING: You are using Node.js 25.1.0 which is not supported by Hardhat.
+Please upgrade to 22.10.0 or a later LTS version (even major version number)
+
+[dotenv@17.2.3] injecting env (0) from ../.env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+Nothing to compile
+Nothing to compile
+
+Network: {
+  connect: [AsyncFunction: connect],
+  createServer: [AsyncFunction: createServer]
+}
+Network Config: undefined

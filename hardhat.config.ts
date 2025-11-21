@@ -19,47 +19,53 @@ const config: HardhatUserConfig = {
       enabled: true,
     },
     etherscan: {
-
-     apiKey: "SCAN_API_KEY",
-     chainDescriptors: {
-    235: {
-      name: "loaffinity",
-      blockExplorers: {
-        etherscan: {
-          name: "Loaffinity Explorer",
-          url: "http://localhost",
-          apiUrl: "http://localhost:4000/api",
+      apiKey: "SCAN_API_KEY",
+      chainDescriptors: {
+        235: {
+          name: "loaffinity",
+          blockExplorers: {
+            etherscan: {
+              name: "Loaffinity Explorer",
+              url: "http://localhost",
+              apiUrl: "http://localhost:4000/api",
+            },
+            blockscout: {
+              name: "Loaffinity Explorer",
+              url: "http://localhost",
+              apiUrl: "http://localhost:4000/api",
+              gas: 4000000,
+            },
+          },
         },
-        blockscout: {
-          name: "Loaffinity Explorer",
-          url: "http://localhost",
-          apiUrl: "http://localhost:4000/api",
+        80002: {
+          name: "amoy",
+          blockExplorers: {
+            etherscan: {
+              name: "amoy",
+              url: "https://amoy.polygonscan.com",
+              apiUrl: "https://polygon-amoy.g.alchemy.com/v2/",
+            },
+            blockscout: {
+              name: "amoy",
+              url: "https://amoy.polygonscan.com/",
+              apiUrl: "https://api.etherscan.io/v2/api",
+            },
+            // other explorers...
+          },
         },
       },
-    },
-    80002: {
-      name: "amoy",
-      blockExplorers: {
-        etherscan: {
-          name: "amoy",
-          url: "https://amoy.polygonscan.com",
-          apiUrl: "https://polygon-amoy.g.alchemy.com/v2/",
-        },
-        blockscout: {
-          name: "amoy",
-          url: "https://amoy.polygonscan.com/",
-          apiUrl: "https://api.etherscan.io/v2/api",
-        },
-        // other explorers...
-      },
-    },
-  },
     },
   },
   solidity: {
     profiles: {
       default: {
         version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
       },
       production: {
         version: "0.8.28",
@@ -76,11 +82,11 @@ const config: HardhatUserConfig = {
     235: {
       name: "loaffinity",
       blockExplorers: {
-        etherscan: {
-          name: "Loaffinity Explorer",
-          url: "http://localhost",
-          apiUrl: "http://localhost:4000/api",
-        },
+        // etherscan: {
+        //   name: "Loaffinity Explorer",
+        //   url: "http://localhost",
+        //   apiUrl: "http://localhost:4000/api",
+        // },
         blockscout: {
           name: "Loaffinity Explorer",
           url: "http://localhost",
@@ -88,6 +94,17 @@ const config: HardhatUserConfig = {
         },
       },
     },
+    116687680: {
+      name: "dlt",
+      blockExplorers: {
+        blockscout: {
+          name: "DLT Explorer",
+          url: "https://loafscoutevm-dev.adldigitalservice.com/",
+          apiUrl: "https://loafscoutevm-dev.adldigitalservice.com/api",
+        },
+      },
+    },
+
     80002: {
       name: "amoy",
       blockExplorers: {
@@ -114,6 +131,13 @@ const config: HardhatUserConfig = {
       type: "edr-simulated",
       chainType: "op",
     },
+    dlt: {
+      type: "http",
+      url: "https://dlp-rpc2-testnet.adldigitalservice.com",
+      accounts: ["9f3d5b4c29b8a7d63a8b7a63dfb0c6c1b8e9a7d63a8b7a63dfb0c6c1b8e9a7d6"],
+      chainId: 116687680,
+      gasPrice: 0,
+    },
     amoy: {
       type: "http",
       url: "https://rpc-amoy.polygon.technology/",
@@ -133,8 +157,7 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       accounts: [configVariable("PRIV_KEY")],
       url: 'http://localhost:8545',
-      gasPrice: 0,
-      gas: 8000000,
+
     },
   },
 };

@@ -1,10 +1,10 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-const ContractFactoryModule = buildModule("ContractFactoryModule", (m) => {
+const ContractFactory2Module = buildModule("ContractFactory2Module", (m) => {
   // Deploy the ContractFactory
-  const contractFactory = m.contract("ContractFactory", []);
+  const contractFactory2 = m.contract("ContractFactory2", []);
 
-  return { contractFactory };
+  return { contractFactory2 };
 });
 
-export default ContractFactoryModule;
+export default ContractFactory2Module;

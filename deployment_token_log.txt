@@ -1,0 +1,13 @@
+
+WARNING: You are using Node.js 25.1.0 which is not supported by Hardhat.
+Please upgrade to 22.10.0 or a later LTS version (even major version number)
+
+[dotenv@17.2.3] injecting env (0) from ../.env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[?25l[2K[1G[36m?[39m [1mConfirm deploy to network loaffinity (235)?[22m [90m›[39m [90m(y/N)[39m[2K[1G[2K[1G[32m✔[39m [1mConfirm deploy to network loaffinity (235)?[22m [90m…[39m yes
+[?25hWarning: Source file does not specify required compiler version! Consider adding "pragma solidity ^0.8.28;"
+--> ./contracts/PointFactory.sol
+
+
+Hardhat Ignition starting for [ Token ]...[2K[1G[ Token ] failed ⛔
+
+

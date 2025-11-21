@@ -10,7 +10,7 @@ const MarketplaceModule = buildModule("MarketplaceModule", (m) => {
   const marketplace = m.contract("Marketplace", [feeRecipient, platformFee]);
 
   // Deploy mock tokens for testing (optional)
-  const MockERC20 = m.contractAt("Token", "0xf9c1bBf0F185F795E0A5305bAFB08E8D40941361"); // Replace with actual contract
+  const MockERC20 = m.contractAt("Token", "0x2c475903Ef9ff74280707cbEB5e0fA64Ab9119d0"); // Replace with actual contract
   
   return { marketplace };
 });

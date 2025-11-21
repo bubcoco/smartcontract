@@ -6,12 +6,17 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// Custom Errors (Saves gas compared to require strings)
+error ArrayLengthMismatch();
+error InvalidAmount();
+
 /**
  * @title SimpleERC20
  * @dev Basic ERC20 token with minting capability
  */
 contract SimpleERC20 is ERC20, Ownable {
-    uint8 private _decimals;
+    // Optimization: immutable variables are embedded in bytecode, avoiding storage reads
+    uint8 private immutable _decimals;
     
     constructor(
         string memory name,
@@ -21,7 +26,9 @@ contract SimpleERC20 is ERC20, Ownable {
         address owner
     ) ERC20(name, symbol) Ownable(owner) {
         _decimals = decimals_;
-        _mint(owner, initialSupply);
+        if (initialSupply > 0) {
+            _mint(owner, initialSupply);
+        }
     }
     
     function decimals() public view virtual override returns (uint8) {
@@ -50,10 +57,19 @@ contract SimpleERC721 is ERC721, Ownable {
     ) ERC721(name, symbol) Ownable(owner) {
         _baseTokenURI = baseTokenURI;
         
-        // Mint initial tokens to owner
-        for (uint256 i = 0; i < initialMintAmount; i++) {
-            _safeMint(owner, _tokenIdCounter);
-            _tokenIdCounter++;
+        if (initialMintAmount > 0) {
+            // Optimization: Cache storage variable to stack
+            uint256 currentId = _tokenIdCounter;
+            
+            for (uint256 i = 0; i < initialMintAmount;) {
+                _safeMint(owner, currentId);
+                unchecked { 
+                    ++currentId; 
+                    ++i; 
+                }
+            }
+            // Update storage once
+            _tokenIdCounter = currentId;
         }
     }
     
@@ -63,24 +79,36 @@ contract SimpleERC721 is ERC721, Ownable {
     
     function mint(address to) external onlyOwner returns (uint256) {
         uint256 tokenId = _tokenIdCounter;
-        _tokenIdCounter++;
+        // Optimization: Unchecked increment
+        unchecked {
+            _tokenIdCounter++;
+        }
         _safeMint(to, tokenId);
         return tokenId;
     }
     
     function mintBatch(address to, uint256 amount) external onlyOwner returns (uint256[] memory) {
         uint256[] memory tokenIds = new uint256[](amount);
+        // Optimization: Cache storage variable
+        uint256 currentId = _tokenIdCounter;
         
-        for (uint256 i = 0; i < amount; i++) {
-            tokenIds[i] = _tokenIdCounter;
-            _safeMint(to, _tokenIdCounter);
-            _tokenIdCounter++;
+        for (uint256 i = 0; i < amount;) {
+            tokenIds[i] = currentId;
+            _safeMint(to, currentId);
+            unchecked {
+                ++currentId;
+                ++i;
+            }
         }
+        
+        // Update storage once at the end
+        _tokenIdCounter = currentId;
         
         return tokenIds;
     }
     
-    function setBaseURI(string memory baseTokenURI) external onlyOwner {
+    // Optimization: Use calldata for string arguments in external functions
+    function setBaseURI(string calldata baseTokenURI) external onlyOwner {
         _baseTokenURI = baseTokenURI;
     }
     
@@ -97,7 +125,6 @@ contract SimpleERC1155 is ERC1155, Ownable {
     string public name;
     uint256 private _currentTokenId;
     
-    // Mapping to track total supply of each token ID
     mapping(uint256 => uint256) private _totalSupply;
     
     constructor(
@@ -109,27 +136,34 @@ contract SimpleERC1155 is ERC1155, Ownable {
     ) ERC1155(uri) Ownable(owner) {
         name = name_;
         
-        // Mint initial tokens to owner
-        require(initialTokenIds.length == initialAmounts.length, "Arrays length mismatch");
+        if (initialTokenIds.length != initialAmounts.length) revert ArrayLengthMismatch();
         
-        if (initialTokenIds.length > 0) {
+        uint256 len = initialTokenIds.length;
+        if (len > 0) {
             _mintBatch(owner, initialTokenIds, initialAmounts, "");
             
-            for (uint256 i = 0; i < initialTokenIds.length; i++) {
-                _totalSupply[initialTokenIds[i]] += initialAmounts[i];
-                // Update current token ID tracker
-                if (initialTokenIds[i] >= _currentTokenId) {
-                    _currentTokenId = initialTokenIds[i] + 1;
+            // Optimization: Cache storage variable
+            uint256 maxId = _currentTokenId;
+
+            for (uint256 i = 0; i < len;) {
+                uint256 id = initialTokenIds[i];
+                _totalSupply[id] += initialAmounts[i];
+                
+                if (id >= maxId) {
+                    maxId = id + 1;
                 }
+                unchecked { ++i; }
             }
+            _currentTokenId = maxId;
         }
     }
     
+    // Optimization: Use calldata for data bytes
     function mint(
         address to,
         uint256 id,
         uint256 amount,
-        bytes memory data
+        bytes calldata data
     ) external onlyOwner {
         _mint(to, id, amount, data);
         _totalSupply[id] += amount;
@@ -141,27 +175,35 @@ contract SimpleERC1155 is ERC1155, Ownable {
     
     function mintBatch(
         address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
     ) external onlyOwner {
         _mintBatch(to, ids, amounts, data);
         
-        for (uint256 i = 0; i < ids.length; i++) {
-            _totalSupply[ids[i]] += amounts[i];
-            if (ids[i] >= _currentTokenId) {
-                _currentTokenId = ids[i] + 1;
+        uint256 maxId = _currentTokenId;
+        uint256 len = ids.length;
+
+        for (uint256 i = 0; i < len;) {
+            uint256 id = ids[i];
+            _totalSupply[id] += amounts[i];
+            if (id >= maxId) {
+                maxId = id + 1;
             }
+            unchecked { ++i; }
         }
+        _currentTokenId = maxId;
     }
     
     function mintNew(
         address to,
         uint256 amount,
-        bytes memory data
+        bytes calldata data
     ) external onlyOwner returns (uint256) {
         uint256 newTokenId = _currentTokenId;
-        _currentTokenId++;
+        unchecked {
+            _currentTokenId++;
+        }
         
         _mint(to, newTokenId, amount, data);
         _totalSupply[newTokenId] = amount;
@@ -169,7 +211,7 @@ contract SimpleERC1155 is ERC1155, Ownable {
         return newTokenId;
     }
     
-    function setURI(string memory newuri) external onlyOwner {
+    function setURI(string calldata newuri) external onlyOwner {
         _setURI(newuri);
     }
     
@@ -192,31 +234,22 @@ contract SimpleERC1155 is ERC1155, Ownable {
  */
 contract ContractFactory2 is Ownable {
     
-    // Events
+    // Events are the cheapest way to track deployments (Off-chain indexing)
     event ERC20Created(address indexed tokenAddress, address indexed owner, string name, string symbol, uint256 initialSupply);
     event ERC721Created(address indexed tokenAddress, address indexed owner, string name, string symbol, uint256 initialMintAmount);
     event ERC1155Created(address indexed tokenAddress, address indexed owner, string name, uint256 initialTokensCount);
     
-    // Arrays to track deployed contracts
-    address[] public erc20Tokens;
-    address[] public erc721Tokens;
-    address[] public erc1155Tokens;
+    // Optimization: Removed global arrays (erc20Tokens, etc.). 
+    // Storing all tokens ever created is extremely expensive and scales poorly.
+    // If specific tracking is needed, rely on Subgraphs/Indexers listening to Events.
     
-    // Mappings to track contracts by creator
+    // Mappings to track contracts by creator are kept but usage should be minimal
     mapping(address => address[]) public creatorToERC20;
     mapping(address => address[]) public creatorToERC721;
     mapping(address => address[]) public creatorToERC1155;
     
     constructor() Ownable(msg.sender) {}
     
-    /**
-     * @dev Create a new ERC20 token
-     * @param name Token name
-     * @param symbol Token symbol
-     * @param decimals Token decimals
-     * @param initialSupply Initial supply to mint to owner
-     * @return address The address of the newly created token
-     */
     function createERC20(
         string memory name,
         string memory symbol,
@@ -232,21 +265,12 @@ contract ContractFactory2 is Ownable {
         );
         
         address tokenAddress = address(token);
-        erc20Tokens.push(tokenAddress);
         creatorToERC20[msg.sender].push(tokenAddress);
         
         emit ERC20Created(tokenAddress, msg.sender, name, symbol, initialSupply);
         return tokenAddress;
     }
     
-    /**
-     * @dev Create a new ERC721 token with initial mint
-     * @param name Token name
-     * @param symbol Token symbol
-     * @param baseTokenURI Base URI for token metadata
-     * @param initialMintAmount Number of tokens to mint initially (0 for no initial mint)
-     * @return address The address of the newly created token
-     */
     function createERC721(
         string memory name,
         string memory symbol,
@@ -262,29 +286,23 @@ contract ContractFactory2 is Ownable {
         );
         
         address tokenAddress = address(token);
-        erc721Tokens.push(tokenAddress);
         creatorToERC721[msg.sender].push(tokenAddress);
         
         emit ERC721Created(tokenAddress, msg.sender, name, symbol, initialMintAmount);
         return tokenAddress;
     }
     
-    /**
-     * @dev Create a new ERC1155 token with initial tokens
-     * @param uri URI for token metadata
-     * @param name Token name
-     * @param initialTokenIds Array of token IDs to mint initially (empty for no initial mint)
-     * @param initialAmounts Array of amounts for each token ID
-     * @return address The address of the newly created token
-     */
+    // Optimization: Use calldata for arrays
     function createERC1155(
         string memory uri,
         string memory name,
-        uint256[] memory initialTokenIds,
-        uint256[] memory initialAmounts
+        uint256[] calldata initialTokenIds,
+        uint256[] calldata initialAmounts
     ) external returns (address) {
-        require(initialTokenIds.length == initialAmounts.length, "Arrays length mismatch");
+        if (initialTokenIds.length != initialAmounts.length) revert ArrayLengthMismatch();
         
+        // Convert calldata to memory for the constructor
+        // (Constructor still needs memory, but we save gas on the factory call itself)
         SimpleERC1155 token = new SimpleERC1155(
             uri,
             name,
@@ -294,49 +312,41 @@ contract ContractFactory2 is Ownable {
         );
         
         address tokenAddress = address(token);
-        erc1155Tokens.push(tokenAddress);
         creatorToERC1155[msg.sender].push(tokenAddress);
         
         emit ERC1155Created(tokenAddress, msg.sender, name, initialTokenIds.length);
         return tokenAddress;
     }
     
-    /**
-     * @dev Create a new ERC1155 token with simple initial mint (single token type)
-     * @param uri URI for token metadata
-     * @param name Token name
-     * @param initialTokenId Initial token ID to mint
-     * @param initialAmount Amount to mint for initial token
-     * @return address The address of the newly created token
-     */
     function createERC1155Simple(
         string memory uri,
         string memory name,
         uint256 initialTokenId,
         uint256 initialAmount
     ) external returns (address) {
+        // Create arrays in memory to pass to constructor
         uint256[] memory tokenIds = new uint256[](1);
         uint256[] memory amounts = new uint256[](1);
         
         tokenIds[0] = initialTokenId;
         amounts[0] = initialAmount;
         
-        return this.createERC1155(uri, name, tokenIds, amounts);
+        SimpleERC1155 token = new SimpleERC1155(
+            uri,
+            name,
+            msg.sender,
+            tokenIds,
+            amounts
+        );
+        
+        address tokenAddress = address(token);
+        creatorToERC1155[msg.sender].push(tokenAddress);
+
+        emit ERC1155Created(tokenAddress, msg.sender, name, 1);
+        return tokenAddress;
     }
     
     // View functions
-    function getERC20Count() external view returns (uint256) {
-        return erc20Tokens.length;
-    }
-    
-    function getERC721Count() external view returns (uint256) {
-        return erc721Tokens.length;
-    }
-    
-    function getERC1155Count() external view returns (uint256) {
-        return erc1155Tokens.length;
-    }
-    
     function getCreatorERC20Tokens(address creator) external view returns (address[] memory) {
         return creatorToERC20[creator];
     }
