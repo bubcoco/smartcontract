@@ -3,7 +3,7 @@ import { parseEther } from "ethers";
 
 const MarketplaceModule = buildModule("MarketplaceModule", (m) => {
   // Parameters
-  const feeRecipient = m.getParameter("feeRecipient", "0xae76b11cece311717934938510327203a373e826");
+  const feeRecipient = m.getParameter("feeRecipient", "0x97236A4A5A3Fba78AA248C4b6130e0946Fd8421d");
   const platformFee = m.getParameter("platformFee", 250); // 2.5%
 
   // Deploy Marketplace

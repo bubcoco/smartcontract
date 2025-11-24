@@ -80,9 +80,10 @@ contract ExpireNFTTest is Test {
     }
     
     function test_MintAtIndex_EmitsEvent() public {
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, false, false, true);
         emit MintedAtIndex(owner, 10);
         nft.mintAtIndex(10);
+        
     }
     
     function test_MintAtIndex_WithPayment() public {

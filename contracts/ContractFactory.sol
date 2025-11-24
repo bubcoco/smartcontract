@@ -87,6 +87,7 @@ contract SimpleERC721 is ERC721, Ownable {
     function totalMinted() external view returns (uint256) {
         return _tokenIdCounter;
     }
+
 }
 
 /**
@@ -123,6 +124,7 @@ contract SimpleERC1155 is ERC1155, Ownable {
                 }
             }
         }
+
     }
     
     function mint(
@@ -184,6 +186,7 @@ contract SimpleERC1155 is ERC1155, Ownable {
     function currentTokenId() external view returns (uint256) {
         return _currentTokenId;
     }
+
 }
 
 /**
