@@ -142,7 +142,7 @@ const config: HardhatUserConfig = {
     dlt: {
       type: "http",
       url: "https://dlp-rpc2-testnet.adldigitalservice.com",
-      accounts: ["9f3d5b4c29b8a7d63a8b7a63dfb0c6c1b8e9a7d63a8b7a63dfb0c6c1b8e9a7d6"],
+      accounts: [configVariable("PRIV_KEY")],
       chainId: 116687680,
       gasPrice: 0,
     },
