@@ -1,6 +1,7 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import "@nomicfoundation/hardhat-ethers";
 import { configVariable } from "hardhat/config";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import { config as dotenvConfig } from "dotenv";
@@ -123,6 +124,11 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    hardhat: {
+      type: "edr-simulated",
+      blockGasLimit: 30000000,
+      allowUnlimitedContractSize: true,
+    },
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",

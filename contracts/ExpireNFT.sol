@@ -10,29 +10,30 @@ contract ExpireNFT is ERC721, Ownable {
 
     uint256 public constant MAX_SUPPLY = 10000;
     uint256 public totalMinted;
-    
+
     // Track which token IDs have been minted
     mapping(uint256 => bool) private _exists;
     // Track token IDs owned by each address
     mapping(address => uint256[]) private _ownedTokens;
     // Track index of token in owner's array
     mapping(uint256 => uint256) private _ownedTokensIndex;
-    
+
     // OPTIMIZATION: Track available token IDs for efficient random minting
-    uint256[] private _availableTokens;
-    mapping(uint256 => uint256) private _availableTokensIndex;
-    
+    // REMOVED: Unused and causes Out of Gas during deployment
+    // uint256[] private _availableTokens;
+    // mapping(uint256 => uint256) private _availableTokensIndex;
+
     // Base URI for metadata
     string private _baseTokenURI;
-    
+
     // Price for minting
     uint256 public mintPrice = 0 ether;
 
     // Expiration and activity period
-    uint256 public expireDate;      // Token expiration date
-    uint256 public activityStart;   // When transfers are allowed
-    uint256 public activityEnd;     // When transfers freeze (can only burn after)
-    
+    uint256 public expireDate; // Token expiration date
+    uint256 public activityStart; // When transfers are allowed
+    uint256 public activityEnd; // When transfers freeze (can only burn after)
+
     event MintedAtIndex(address indexed to, uint256 indexed tokenId);
     event MintedRandom(address indexed to, uint256 indexed tokenId);
     event MintedReserve(address indexed to, uint256 indexed tokenId);
@@ -40,30 +41,30 @@ contract ExpireNFT is ERC721, Ownable {
     event ActivityPeriodSet(uint256 startTime, uint256 endTime);
     event TokenBurned(address indexed owner, uint256 indexed tokenId);
 
-    constructor(string memory name, string memory symbol) 
-        ERC721(name, symbol) 
-        Ownable(msg.sender)
-    {
+    constructor(
+        string memory name,
+        string memory symbol
+    ) ERC721(name, symbol) Ownable(msg.sender) {
         // Default: no expiration
         expireDate = type(uint256).max;
         // Default: transfers enabled immediately
         activityStart = block.timestamp;
         // Default: no end date (transfers always allowed)
         activityEnd = type(uint256).max;
-        
+
         // OPTIMIZATION: Initialize available tokens array
-        _initializeAvailableTokens();
+        // _initializeAvailableTokens();
     }
-    
+
     /**
      * @dev Initialize the available tokens array with all token IDs
      */
-    function _initializeAvailableTokens() private {
-        for (uint256 i = 0; i < MAX_SUPPLY; i++) {
-            _availableTokens.push(i);
-            _availableTokensIndex[i] = i;
-        }
-    }
+    // function _initializeAvailableTokens() private {
+    //     for (uint256 i = 0; i < MAX_SUPPLY; i++) {
+    //         _availableTokens.push(i);
+    //         _availableTokensIndex[i] = i;
+    //     }
+    // }
 
     /**
      * @dev Mint a specific token ID at a given index
@@ -115,7 +116,7 @@ contract ExpireNFT is ERC721, Ownable {
         _safeMint(msg.sender, tokenId);
 
         emit MintedRandom(msg.sender, tokenId);
-        
+
         return tokenId;
     }
 
@@ -148,7 +149,10 @@ contract ExpireNFT is ERC721, Ownable {
      * @param to Address to mint to
      * @param tokenIds Array of token IDs to reserve and mint
      */
-    function mintReserveBatch(address to, uint256[] calldata tokenIds) external onlyOwner {
+    function mintReserveBatch(
+        address to,
+        uint256[] calldata tokenIds
+    ) external onlyOwner {
         uint256 count = tokenIds.length;
         require(totalMinted + count <= MAX_SUPPLY, "Would exceed max supply");
 
@@ -168,7 +172,9 @@ contract ExpireNFT is ERC721, Ownable {
     /**
      * @dev Internal function to find the nth available token
      */
-    function _findAvailableTokenAtIndex(uint256 index) private view returns (uint256) {
+    function _findAvailableTokenAtIndex(
+        uint256 index
+    ) private view returns (uint256) {
         uint256 count = 0;
         for (uint256 i = 0; i < MAX_SUPPLY; i++) {
             if (!_exists[i]) {
@@ -200,25 +206,27 @@ contract ExpireNFT is ERC721, Ownable {
     /**
      * @dev Get array of available token IDs (limited to first 100 for gas efficiency)
      */
-    function getAvailableTokens(uint256 limit) external view returns (uint256[] memory) {
+    function getAvailableTokens(
+        uint256 limit
+    ) external view returns (uint256[] memory) {
         require(limit <= 100, "Limit too high");
-        
+
         uint256[] memory available = new uint256[](limit);
         uint256 count = 0;
-        
+
         for (uint256 i = 0; i < MAX_SUPPLY && count < limit; i++) {
             if (!_exists[i]) {
                 available[count] = i;
                 count++;
             }
         }
-        
+
         // Resize array if fewer tokens found
         uint256[] memory result = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
             result[i] = available[i];
         }
-        
+
         return result;
     }
 
@@ -251,7 +259,10 @@ contract ExpireNFT is ERC721, Ownable {
      * @param startTime Unix timestamp when transfers start
      * @param endTime Unix timestamp when transfers freeze
      */
-    function setActivityPeriod(uint256 startTime, uint256 endTime) external onlyOwner {
+    function setActivityPeriod(
+        uint256 startTime,
+        uint256 endTime
+    ) external onlyOwner {
         require(endTime > startTime, "End must be after start");
         activityStart = startTime;
         activityEnd = endTime;
@@ -262,7 +273,8 @@ contract ExpireNFT is ERC721, Ownable {
      * @dev Check if transfers are currently allowed
      */
     function isTransferActive() public view returns (bool) {
-        return block.timestamp >= activityStart && block.timestamp < activityEnd;
+        return
+            block.timestamp >= activityStart && block.timestamp < activityEnd;
     }
 
     /**
@@ -282,10 +294,10 @@ contract ExpireNFT is ERC721, Ownable {
             ownerOf(tokenId) == msg.sender || isActivityEnded(),
             "Not authorized to burn"
         );
-        
+
         _exists[tokenId] = false;
         _burn(tokenId);
-        
+
         emit TokenBurned(msg.sender, tokenId);
     }
 
@@ -300,7 +312,10 @@ contract ExpireNFT is ERC721, Ownable {
     /**
      * @dev Remove token from owner's tracking array
      */
-    function _removeTokenFromOwnerEnumeration(address from, uint256 tokenId) private {
+    function _removeTokenFromOwnerEnumeration(
+        address from,
+        uint256 tokenId
+    ) private {
         uint256 lastTokenIndex = _ownedTokens[from].length - 1;
         uint256 tokenIndex = _ownedTokensIndex[tokenId];
 
@@ -325,7 +340,7 @@ contract ExpireNFT is ERC721, Ownable {
         address auth
     ) internal virtual override returns (address) {
         address from = _ownerOf(tokenId);
-        
+
         // Allow minting (from == address(0))
         // Allow burning (to == address(0))
         // Block transfers outside activity period
@@ -342,7 +357,7 @@ contract ExpireNFT is ERC721, Ownable {
         if (to != address(0)) {
             _addTokenToOwnerEnumeration(to, tokenId);
         }
-        
+
         return super._update(to, tokenId, auth);
     }
 
@@ -365,12 +380,15 @@ contract ExpireNFT is ERC721, Ownable {
     /**
      * @dev Override tokenURI to provide metadata
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
         require(_exists[tokenId], "Token does not exist");
-        
+
         string memory baseURI = _baseURI();
-        return bytes(baseURI).length > 0 
-            ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
-            : "";
+        return
+            bytes(baseURI).length > 0
+                ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+                : "";
     }
 }
