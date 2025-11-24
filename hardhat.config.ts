@@ -126,10 +126,12 @@ const config: HardhatUserConfig = {
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
+      blockGasLimit: 30000000,
     },
     hardhatOp: {
       type: "edr-simulated",
       chainType: "op",
+      blockGasLimit: 30000000,
     },
     dlt: {
       type: "http",

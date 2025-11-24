@@ -1,8 +1,10 @@
 // test/MemberCard.test.ts
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 import { MemberCard } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+
+const { ethers } = await network.connect();
 
 describe("MemberCard", function () {
   let memberCard: MemberCard;
@@ -49,7 +51,7 @@ describe("MemberCard", function () {
 
     it("Should initialize card data correctly", async function () {
       await memberCard.mintCard(user1.address);
-      
+
       const [stampCount, redeemed, , canRedeem] = await memberCard.getCardInfo(0);
       expect(stampCount).to.equal(0);
       expect(redeemed).to.equal(false);
@@ -80,7 +82,7 @@ describe("MemberCard", function () {
 
     it("Should add a stamp to a card", async function () {
       await memberCard.addStamp(0);
-      
+
       const stampCount = await memberCard.getStampCount(0);
       expect(stampCount).to.equal(1);
     });
@@ -98,7 +100,7 @@ describe("MemberCard", function () {
     it("Should record timestamp for each stamp", async function () {
       await memberCard.addStamp(0);
       await memberCard.addStamp(0);
-      
+
       const stamps = await memberCard.getStamps(0);
       expect(stamps.length).to.equal(2);
       expect(stamps[0]).to.be.gt(0);
@@ -109,7 +111,7 @@ describe("MemberCard", function () {
       for (let i = 0; i < 10; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       const stampCount = await memberCard.getStampCount(0);
       expect(stampCount).to.equal(10);
     });
@@ -118,7 +120,7 @@ describe("MemberCard", function () {
       for (let i = 0; i < 10; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       await expect(memberCard.addStamp(0))
         .to.be.revertedWith("Card is full");
     });
@@ -133,7 +135,7 @@ describe("MemberCard", function () {
         await memberCard.addStamp(0);
       }
       await memberCard.connect(user1).redeemReward(0);
-      
+
       await expect(memberCard.addStamp(0))
         .to.be.revertedWith("Card already redeemed");
     });
@@ -154,7 +156,7 @@ describe("MemberCard", function () {
       for (let i = 0; i < 10; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       await expect(memberCard.connect(user1).redeemReward(0))
         .to.emit(memberCard, "Redeemed")
         .withArgs(0, user1.address);
@@ -165,7 +167,7 @@ describe("MemberCard", function () {
         await memberCard.addStamp(0);
       }
       await memberCard.connect(user1).redeemReward(0);
-      
+
       expect(await memberCard.isRedeemed(0)).to.equal(true);
     });
 
@@ -173,7 +175,7 @@ describe("MemberCard", function () {
       for (let i = 0; i < 9; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       await expect(
         memberCard.connect(user1).redeemReward(0)
       ).to.be.revertedWith("Need 10 stamps to redeem");
@@ -183,7 +185,7 @@ describe("MemberCard", function () {
       for (let i = 0; i < 10; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       await expect(
         memberCard.connect(user2).redeemReward(0)
       ).to.be.revertedWith("Not the card owner");
@@ -194,7 +196,7 @@ describe("MemberCard", function () {
         await memberCard.addStamp(0);
       }
       await memberCard.connect(user1).redeemReward(0);
-      
+
       await expect(
         memberCard.connect(user1).redeemReward(0)
       ).to.be.revertedWith("Already redeemed");
@@ -207,12 +209,12 @@ describe("MemberCard", function () {
       for (let i = 0; i < 10; i++) {
         await memberCard.addStamp(0);
       }
-      
+
       [, , , canRedeem] = await memberCard.getCardInfo(0);
       expect(canRedeem).to.equal(true);
 
       await memberCard.connect(user1).redeemReward(0);
-      
+
       [, , , canRedeem] = await memberCard.getCardInfo(0);
       expect(canRedeem).to.equal(false);
     });
@@ -229,7 +231,7 @@ describe("MemberCard", function () {
 
     it("Should reset a redeemed card", async function () {
       await memberCard.resetCard(0);
-      
+
       const [stampCount, redeemed, stamps] = await memberCard.getCardInfo(0);
       expect(stampCount).to.equal(0);
       expect(redeemed).to.equal(false);
@@ -238,7 +240,7 @@ describe("MemberCard", function () {
 
     it("Should not reset non-redeemed card", async function () {
       await memberCard.mintCard(user2.address);
-      
+
       await expect(memberCard.resetCard(1))
         .to.be.revertedWith("Card not yet redeemed");
     });
@@ -246,7 +248,7 @@ describe("MemberCard", function () {
     it("Should allow stamping after reset", async function () {
       await memberCard.resetCard(0);
       await memberCard.addStamp(0);
-      
+
       const stampCount = await memberCard.getStampCount(0);
       expect(stampCount).to.equal(1);
     });
@@ -267,7 +269,7 @@ describe("MemberCard", function () {
 
     it("Should return correct card info", async function () {
       const [stampCount, redeemed, stamps, canRedeem] = await memberCard.getCardInfo(0);
-      
+
       expect(stampCount).to.equal(2);
       expect(redeemed).to.equal(false);
       expect(stamps.length).to.equal(2);

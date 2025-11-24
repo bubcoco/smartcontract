@@ -1,8 +1,21 @@
 import { expect } from "chai";
-import hre from "hardhat";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { network } from "hardhat";
 import type { ExpireNFT } from "../typechain-types/contracts/ExpireNFT.js";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+
+const { ethers } = await network.connect();
+
+// Custom time helpers since @nomicfoundation/hardhat-network-helpers is not available
+const time = {
+  latest: async () => {
+    const block = await ethers.provider.getBlock("latest");
+    return block!.timestamp;
+  },
+  increaseTo: async (timestamp: number) => {
+    await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
+    await ethers.provider.send("evm_mine", []);
+  }
+};
 
 describe("ExpireNFT", function () {
   let expireNFT: ExpireNFT;
@@ -12,12 +25,12 @@ describe("ExpireNFT", function () {
 
   const TOKEN_NAME = "ExpireNFT";
   const TOKEN_SYMBOL = "ENFT";
-  const MINT_PRICE = hre.ethers.parseEther("0.01");
+  const MINT_PRICE = ethers.parseEther("0.01");
 
   beforeEach(async function () {
-    [owner, user1, user2] = await hre.ethers.getSigners();
+    [owner, user1, user2] = await ethers.getSigners();
 
-    const ExpireNFTFactory = await hre.ethers.getContractFactory("ExpireNFT");
+    const ExpireNFTFactory = await ethers.getContractFactory("ExpireNFT");
     expireNFT = await ExpireNFTFactory.deploy(TOKEN_NAME, TOKEN_SYMBOL) as ExpireNFT;
     await expireNFT.waitForDeployment();
   });
@@ -94,7 +107,7 @@ describe("ExpireNFT", function () {
       await expect(
         expireNFT.mintAtIndex(1)
       ).to.be.revertedWith("Insufficient payment");
-      
+
       await expireNFT.mintAtIndex(1, { value: MINT_PRICE });
       expect(await expireNFT.ownerOf(1)).to.equal(owner.address);
     });
@@ -123,7 +136,7 @@ describe("ExpireNFT", function () {
       await expireNFT.connect(user1).mintAtIndex(1);
       await expireNFT.connect(user1).mintAtIndex(2);
       await expireNFT.connect(user1).mintAtIndex(3);
-      
+
       const owned = await expireNFT.ownedIds(user1.address);
       expect(owned.length).to.equal(3);
       expect(owned).to.include(1n);
@@ -154,7 +167,7 @@ describe("ExpireNFT", function () {
         } catch { return false; }
       });
       const token1 = event1 ? expireNFT.interface.parseLog(event1)?.args[1] : 0n;
-      
+
       const tx2 = await expireNFT.mintRandom();
       const receipt2 = await tx2.wait();
       const event2 = receipt2?.logs.find((log: any) => {
@@ -163,7 +176,7 @@ describe("ExpireNFT", function () {
         } catch { return false; }
       });
       const token2 = event2 ? expireNFT.interface.parseLog(event2)?.args[1] : 0n;
-      
+
       expect(token1).to.not.equal(token2);
     });
 
@@ -171,15 +184,15 @@ describe("ExpireNFT", function () {
       // Mint first token
       const gas1 = await expireNFT.mintRandom.estimateGas();
       await expireNFT.mintRandom();
-      
+
       // Mint 50 more tokens
       for (let i = 0; i < 50; i++) {
         await expireNFT.connect(user1).mintRandom();
       }
-      
+
       // Mint again and check gas is similar
       const gas2 = await expireNFT.mintRandom.estimateGas();
-      
+
       // Gas should be within 20% (accounting for storage changes)
       const gasDiff = gas1 > gas2 ? gas1 - gas2 : gas2 - gas1;
       const gasPercent = (gasDiff * 100n) / gas1;
@@ -191,7 +204,7 @@ describe("ExpireNFT", function () {
       await expect(
         expireNFT.mintRandom()
       ).to.be.revertedWith("Insufficient payment");
-      
+
       await expireNFT.mintRandom({ value: MINT_PRICE });
       expect(await expireNFT.totalMinted()).to.equal(1);
     });
@@ -233,7 +246,7 @@ describe("ExpireNFT", function () {
     it("Should batch mint multiple tokens", async function () {
       const tokenIds = [1, 5, 10, 25, 100];
       await expireNFT.mintReserveBatch(user1.address, tokenIds);
-      
+
       for (const id of tokenIds) {
         expect(await expireNFT.ownerOf(id)).to.equal(user1.address);
       }
@@ -278,18 +291,18 @@ describe("ExpireNFT", function () {
     it("Should prevent minting after expiration", async function () {
       const futureTime = (await time.latest()) + 3600;
       await expireNFT.setExpireDate(futureTime);
-      
+
       // Should work before expiration
       await expireNFT.mintAtIndex(1);
-      
+
       // Fast forward past expiration
       await time.increaseTo(futureTime + 1);
-      
+
       // Should fail after expiration
       await expect(
         expireNFT.mintAtIndex(2)
       ).to.be.revertedWith("Minting has expired");
-      
+
       await expect(
         expireNFT.mintRandom()
       ).to.be.revertedWith("Minting has expired");
@@ -300,7 +313,7 @@ describe("ExpireNFT", function () {
     it("Should allow owner to set activity period", async function () {
       const startTime = (await time.latest()) + 3600;
       const endTime = startTime + 7200;
-      
+
       await expireNFT.setActivityPeriod(startTime, endTime);
       expect(await expireNFT.activityStart()).to.equal(startTime);
       expect(await expireNFT.activityEnd()).to.equal(endTime);
@@ -309,7 +322,7 @@ describe("ExpireNFT", function () {
     it("Should emit ActivityPeriodSet event", async function () {
       const startTime = (await time.latest()) + 3600;
       const endTime = startTime + 7200;
-      
+
       await expect(expireNFT.setActivityPeriod(startTime, endTime))
         .to.emit(expireNFT, "ActivityPeriodSet")
         .withArgs(startTime, endTime);
@@ -318,7 +331,7 @@ describe("ExpireNFT", function () {
     it("Should not allow end time before start time", async function () {
       const startTime = (await time.latest()) + 3600;
       const endTime = startTime - 1;
-      
+
       await expect(
         expireNFT.setActivityPeriod(startTime, endTime)
       ).to.be.revertedWith("End must be after start");
@@ -328,16 +341,16 @@ describe("ExpireNFT", function () {
       const currentTime = await time.latest();
       const startTime = currentTime + 3600;
       const endTime = startTime + 7200;
-      
+
       await expireNFT.setActivityPeriod(startTime, endTime);
-      
+
       // Before start
       expect(await expireNFT.isTransferActive()).to.be.false;
-      
+
       // During period
       await time.increaseTo(startTime + 1);
       expect(await expireNFT.isTransferActive()).to.be.true;
-      
+
       // After end
       await time.increaseTo(endTime + 1);
       expect(await expireNFT.isTransferActive()).to.be.false;
@@ -347,12 +360,12 @@ describe("ExpireNFT", function () {
       const currentTime = await time.latest();
       const startTime = currentTime + 3600;
       const endTime = startTime + 7200;
-      
+
       await expireNFT.setActivityPeriod(startTime, endTime);
-      
+
       // Before end
       expect(await expireNFT.isActivityEnded()).to.be.false;
-      
+
       // After end
       await time.increaseTo(endTime + 1);
       expect(await expireNFT.isActivityEnded()).to.be.true;
@@ -373,7 +386,7 @@ describe("ExpireNFT", function () {
     it("Should block transfer before activity start", async function () {
       const futureTime = (await time.latest()) + 3600;
       await expireNFT.setActivityPeriod(futureTime, futureTime + 7200);
-      
+
       await expect(
         expireNFT.connect(user1).transferFrom(user1.address, user2.address, 1)
       ).to.be.revertedWith("Transfers not active or frozen");
@@ -383,12 +396,12 @@ describe("ExpireNFT", function () {
       const currentTime = await time.latest();
       const startTime = currentTime;
       const endTime = currentTime + 3600;
-      
+
       await expireNFT.setActivityPeriod(startTime, endTime);
-      
+
       // Fast forward past end
       await time.increaseTo(endTime + 1);
-      
+
       await expect(
         expireNFT.connect(user1).transferFrom(user1.address, user2.address, 1)
       ).to.be.revertedWith("Transfers not active or frozen");
@@ -396,10 +409,10 @@ describe("ExpireNFT", function () {
 
     it("Should update ownedIds after transfer", async function () {
       await expireNFT.connect(user1).transferFrom(user1.address, user2.address, 1);
-      
+
       const user1Owned = await expireNFT.ownedIds(user1.address);
       const user2Owned = await expireNFT.ownedIds(user2.address);
-      
+
       expect(user1Owned.length).to.equal(0);
       expect(user2Owned.length).to.equal(1);
       expect(user2Owned[0]).to.equal(1);
@@ -432,9 +445,9 @@ describe("ExpireNFT", function () {
     it("Should allow anyone to burn after activity end", async function () {
       const currentTime = await time.latest();
       await expireNFT.setActivityPeriod(currentTime, currentTime + 3600);
-      
+
       await time.increaseTo(currentTime + 3601);
-      
+
       await expireNFT.connect(user2).burn(1);
       await expect(expireNFT.ownerOf(1)).to.be.reverted;
     });
@@ -442,12 +455,12 @@ describe("ExpireNFT", function () {
     it("Should update ownedIds after burn", async function () {
       await expireNFT.connect(user1).mintAtIndex(2);
       await expireNFT.connect(user1).mintAtIndex(3);
-      
+
       let owned = await expireNFT.ownedIds(user1.address);
       expect(owned.length).to.equal(3);
-      
+
       await expireNFT.connect(user1).burn(2);
-      
+
       owned = await expireNFT.ownedIds(user1.address);
       expect(owned.length).to.equal(2);
       expect(owned).to.not.include(2n);
@@ -465,7 +478,7 @@ describe("ExpireNFT", function () {
       for (let i = 0; i < 9995; i++) {
         await expireNFT.mintAtIndex(i);
       }
-      
+
       const available = await expireNFT.getAvailableTokens(100);
       expect(available.length).to.equal(5);
     });
@@ -480,7 +493,7 @@ describe("ExpireNFT", function () {
       await expireNFT.mintAtIndex(0);
       await expireNFT.mintAtIndex(1);
       await expireNFT.mintAtIndex(2);
-      
+
       const available = await expireNFT.getAvailableTokens(10);
       expect(available).to.not.include(0n);
       expect(available).to.not.include(1n);
@@ -498,7 +511,7 @@ describe("ExpireNFT", function () {
       await expireNFT.connect(user1).mintAtIndex(5);
       await expireNFT.connect(user1).mintAtIndex(10);
       await expireNFT.connect(user1).mintAtIndex(15);
-      
+
       const owned = await expireNFT.ownedIds(user1.address);
       expect(owned.length).to.equal(3);
       expect(owned).to.include(5n);
@@ -509,7 +522,7 @@ describe("ExpireNFT", function () {
     it("Should update after transfer", async function () {
       await expireNFT.connect(user1).mintAtIndex(1);
       await expireNFT.connect(user1).transferFrom(user1.address, user2.address, 1);
-      
+
       expect((await expireNFT.ownedIds(user1.address)).length).to.equal(0);
       expect((await expireNFT.ownedIds(user2.address)).length).to.equal(1);
     });
@@ -519,13 +532,13 @@ describe("ExpireNFT", function () {
     it("Should allow owner to withdraw funds", async function () {
       await expireNFT.setMintPrice(MINT_PRICE);
       await expireNFT.connect(user1).mintAtIndex(1, { value: MINT_PRICE });
-      
-      const balanceBefore = await hre.ethers.provider.getBalance(owner.address);
+
+      const balanceBefore = await ethers.provider.getBalance(owner.address);
       const tx = await expireNFT.withdraw();
       const receipt = await tx.wait();
       const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
-      
-      const balanceAfter = await hre.ethers.provider.getBalance(owner.address);
+
+      const balanceAfter = await ethers.provider.getBalance(owner.address);
       expect(balanceAfter).to.equal(balanceBefore + MINT_PRICE - gasUsed);
     });
 
@@ -545,24 +558,24 @@ describe("ExpireNFT", function () {
   describe("Gas Optimization Tests", function () {
     it("mintRandom should have consistent gas", async function () {
       const measurements: bigint[] = [];
-      
+
       // Measure gas at different stages
       for (let stage = 0; stage < 5; stage++) {
         const gas = await expireNFT.mintRandom.estimateGas();
         measurements.push(gas);
         await expireNFT.mintRandom();
-        
+
         // Mint 20 more tokens
         for (let i = 0; i < 20; i++) {
           await expireNFT.connect(user1).mintRandom();
         }
       }
-      
+
       // Check all measurements are within 25% of each other
       const maxGas = measurements.reduce((a, b) => a > b ? a : b);
       const minGas = measurements.reduce((a, b) => a < b ? a : b);
       const variance = ((maxGas - minGas) * 100n) / minGas;
-      
+
       expect(variance).to.be.lessThan(25n);
     });
   });
