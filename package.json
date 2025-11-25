@@ -16,9 +16,14 @@
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "@nomicfoundation/hardhat-ethers-chai-matchers": "^3.0.2",
     "@nomicfoundation/hardhat-ignition": "^3.0.2",
+    "@nomicfoundation/hardhat-ignition-ethers": "^3.0.5",
     "@nomicfoundation/hardhat-keystore": "^3.0.1",
+    "@nomicfoundation/hardhat-mocha": "^3.0.7",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-typechain": "^3.0.1",
     "@nomicfoundation/hardhat-verify": "^3.0.1",
     "@types/chai": "^4.3.20",
     "@types/chai-as-promised": "^8.0.2",
@@ -36,10 +41,33 @@
   "dependencies": {
     "@chainlink/contracts": "^1.5.0",
     "@chainlink/contracts-dev": "npm:@chainlink/contracts@^1.1.0",
+    "@openzeppelin/contracts": "5.0.2",
     "@openzeppelin/contracts-upgradeable": "5.0.2",
-    "@openzeppelin/contracts-upgradeable-v4": "npm:@openzeppelin/contracts-upgradeable@^4.5.1",
-    "@openzeppelin/contracts-v46": "npm:@openzeppelin/contracts@4.6.0",
-    "@openzeppelin/contracts-v48": "npm:@openzeppelin/contracts@4.8.3",
+    "@openzeppelin/contracts-upgradeable-v4": "npm:@openzeppelin/contracts-upgradeable@^4.9.6",
+    "@openzeppelin/contracts-v46": "npm:@openzeppelin/contracts@4.9.6",
+    "@openzeppelin/contracts-v48": "npm:@openzeppelin/contracts@4.9.6",
     "dotenv": "^17.2.3"
+  },
+  "overrides": {
+    "ws": "^8.18.3",
+    "tmp": "^0.2.5",
+    "elliptic": "^6.6.1",
+    "axios": "0.30.2",
+    "@arbitrum/nitro-contracts": {
+      "@openzeppelin/contracts-upgradeable": "4.9.6",
+      "@openzeppelin/contracts": "4.9.6"
+    },
+    "@offchainlabs/upgrade-executor": {
+      "@openzeppelin/contracts-upgradeable": "4.9.6",
+      "@openzeppelin/contracts": "4.9.6"
+    },
+    "@chainlink/contracts": {
+      "@openzeppelin/contracts-4.7.3": "npm:@openzeppelin/contracts@5.0.2",
+      "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@5.0.2"
+    },
+    "@chainlink/contracts-dev": {
+      "@openzeppelin/contracts-4.7.3": "npm:@openzeppelin/contracts@5.0.2",
+      "@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@5.0.2"
+    }
   }
 }
