@@ -18,7 +18,7 @@
 
 # Hardhat coverage reports
 /coverage
-
+/scripts
 /ignition/deployments
 
 .env
