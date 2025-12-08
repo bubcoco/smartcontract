@@ -235,8 +235,8 @@ contract SimpleERC1155 is ERC1155, Ownable {
 contract ContractFactory2 is Ownable {
     
     // Events are the cheapest way to track deployments (Off-chain indexing)
-    event ERC20Created(address indexed tokenAddress, address indexed owner, string name, string symbol, uint256 initialSupply);
-    event ERC721Created(address indexed tokenAddress, address indexed owner, string name, string symbol, uint256 initialMintAmount);
+    event ERC20Created(address indexed tokenAddress, string name, string symbol, uint256 initialSupply, address indexed owner);
+    event ERC721Created(address indexed tokenAddress, string name, string symbol, string baseTokenURI, address indexed owner, uint256 initialMintAmount);
     event ERC1155Created(address indexed tokenAddress, address indexed owner, string name, uint256 initialTokensCount);
     
     // Optimization: Removed global arrays (erc20Tokens, etc.). 
@@ -254,20 +254,21 @@ contract ContractFactory2 is Ownable {
         string memory name,
         string memory symbol,
         uint8 decimals,
-        uint256 initialSupply
+        uint256 initialSupply,
+        address to
     ) external returns (address) {
         SimpleERC20 token = new SimpleERC20(
             name,
             symbol,
             decimals,
             initialSupply,
-            msg.sender
+            to
         );
         
         address tokenAddress = address(token);
-        creatorToERC20[msg.sender].push(tokenAddress);
+        creatorToERC20[to].push(tokenAddress);
         
-        emit ERC20Created(tokenAddress, msg.sender, name, symbol, initialSupply);
+        emit ERC20Created(tokenAddress, name, symbol, initialSupply, to);
         return tokenAddress;
     }
     
@@ -275,20 +276,21 @@ contract ContractFactory2 is Ownable {
         string memory name,
         string memory symbol,
         string memory baseTokenURI,
+        address to,
         uint256 initialMintAmount
     ) external returns (address) {
         SimpleERC721 token = new SimpleERC721(
             name,
             symbol,
             baseTokenURI,
-            msg.sender,
+            to,
             initialMintAmount
         );
         
         address tokenAddress = address(token);
-        creatorToERC721[msg.sender].push(tokenAddress);
+        creatorToERC721[to].push(tokenAddress);
         
-        emit ERC721Created(tokenAddress, msg.sender, name, symbol, initialMintAmount);
+        emit ERC721Created(tokenAddress, name, symbol, baseTokenURI, to, initialMintAmount);
         return tokenAddress;
     }
     
@@ -297,7 +299,8 @@ contract ContractFactory2 is Ownable {
         string memory uri,
         string memory name,
         uint256[] calldata initialTokenIds,
-        uint256[] calldata initialAmounts
+        uint256[] calldata initialAmounts,
+        address to
     ) external returns (address) {
         if (initialTokenIds.length != initialAmounts.length) revert ArrayLengthMismatch();
         
@@ -306,15 +309,15 @@ contract ContractFactory2 is Ownable {
         SimpleERC1155 token = new SimpleERC1155(
             uri,
             name,
-            msg.sender,
+            to,
             initialTokenIds,
             initialAmounts
         );
         
         address tokenAddress = address(token);
-        creatorToERC1155[msg.sender].push(tokenAddress);
+        creatorToERC1155[to].push(tokenAddress);
         
-        emit ERC1155Created(tokenAddress, msg.sender, name, initialTokenIds.length);
+        emit ERC1155Created(tokenAddress, to, name, initialTokenIds.length);
         return tokenAddress;
     }
     
@@ -322,7 +325,8 @@ contract ContractFactory2 is Ownable {
         string memory uri,
         string memory name,
         uint256 initialTokenId,
-        uint256 initialAmount
+        uint256 initialAmount,
+        address to
     ) external returns (address) {
         // Create arrays in memory to pass to constructor
         uint256[] memory tokenIds = new uint256[](1);
@@ -334,15 +338,15 @@ contract ContractFactory2 is Ownable {
         SimpleERC1155 token = new SimpleERC1155(
             uri,
             name,
-            msg.sender,
+            to,
             tokenIds,
             amounts
         );
         
         address tokenAddress = address(token);
-        creatorToERC1155[msg.sender].push(tokenAddress);
+        creatorToERC1155[to].push(tokenAddress);
 
-        emit ERC1155Created(tokenAddress, msg.sender, name, 1);
+        emit ERC1155Created(tokenAddress, to, name, 1);
         return tokenAddress;
     }
     
