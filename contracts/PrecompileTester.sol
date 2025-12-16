@@ -51,17 +51,17 @@ contract PrecompileTester {
     // }
 
     function testMinterInitialized() external view returns (bool) {
-        return INativeMinter(NATIVE_MINTER_ADDR).initialized();
+        return IOwnable(NATIVE_MINTER_ADDR).initialized();
     }
 
     function testMinterInitializeOwner(address owner) external returns (bool) {
-        return INativeMinter(NATIVE_MINTER_ADDR).initializeOwner(owner);
+        return IOwnable(NATIVE_MINTER_ADDR).initializeOwner(owner);
     }
 
     function testMinterTransferOwnership(
         address newOwner
     ) external returns (bool) {
-        return INativeMinter(NATIVE_MINTER_ADDR).transferOwnership(newOwner);
+        return IOwnable(NATIVE_MINTER_ADDR).transferOwnership(newOwner);
     }
 
     // AddressRegistry
