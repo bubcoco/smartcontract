@@ -8,8 +8,8 @@ async function main() {
 
     // List of private keys to check and fix
     const privateKeys = [
-        process.env.ADMIN1, // Account 1
-        process.env.ADMIN2,  // Account 2
+        "A1", // Account 1
+        "A2"  // Account 2
     ];
 
     for (const pk of privateKeys) {

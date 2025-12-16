@@ -27,7 +27,7 @@ async function main() {
 
     // Setup provider and wallet
     const rpcUrl = "http://localhost:8545";
-    const privateKey = process.env.ADMIN2;
+    const privateKey = "";
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
