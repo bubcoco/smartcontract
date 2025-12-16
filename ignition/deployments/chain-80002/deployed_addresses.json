@@ -1,8 +1,0 @@
-{
-  "Token#Token": "0x1c055576c46ea536f3b3A45810366811D594377D",
-  "GameToken#GameToken": "0xE9764543bF2E5a266dD6b36E23f9875B3cF6e3c5",
-  "CounterModule#Counter": "0xcBE8216F9A8AB801362B11C2a80F37aF2b23810f",
-  "ExpireNFTModule#ExpireNFT": "0x0819a7FCb4154210061Bf149d8F8ed04a74EE6EF",
-  "MarketplaceModule#GameToken": "0xE9764543bF2E5a266dD6b36E23f9875B3cF6e3c5",
-  "MarketplaceModule#Marketplace": "0xD4602e3B2ee7220e83812A863956d2eb09c8C5f5"
-}

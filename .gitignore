@@ -18,9 +18,8 @@
 
 # Hardhat coverage reports
 /coverage
-/scripts
 /ignition/deployments
-
+/oldScript
 .env
 
 script.txt
