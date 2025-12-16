@@ -37,4 +37,14 @@ interface IOwnable {
      * @return True if ownership was successfully initialized, otherwise false.
      */
     function initializeOwner(address owner) external returns (bool);
+
+    /**
+     * @notice Initializes the contract's ownership and total supply to specific values.
+     * @dev Sets the provided `owner` as the initial owner of the contract and `totalSupply` as the initial total supply.
+     * Can only be called once, typically during contract deployment.
+     * @param owner The address to set as the initial owner.
+     * @param totalSupply The initial total supply to set.
+     * @return True if ownership and total supply were successfully initialized, otherwise false.
+     */
+    function initializeOwnerAndSupply(address owner, uint256 totalSupply) external returns (bool);
 }

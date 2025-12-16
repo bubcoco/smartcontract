@@ -28,26 +28,40 @@ contract PrecompileTester {
     receive() external payable {}
 
     // NativeMinter
-    function testMint(address to, uint256 value) external returns (bool) {
+    function testMint(
+        address to,
+        uint256 value
+    ) external returns (bool) {
         return INativeMinter(NATIVE_MINTER_ADDR).mint(to, value);
     }
 
-    function testMinterOwner() external view returns (address) {
-        return IOwnable(NATIVE_MINTER_ADDR).owner();
+    function testMinterInitializeOwnerAndSupply(
+        address owner,
+        uint256 totalSupply
+    ) external returns (bool) {
+        return
+            IOwnable(NATIVE_MINTER_ADDR).initializeOwnerAndSupply(
+                owner,
+                totalSupply
+            );
     }
 
+    // function testMinterOwner() external view returns (address) {
+    //     return INativeMinter(NATIVE_MINTER_ADDR).owner();
+    // }
+
     function testMinterInitialized() external view returns (bool) {
-        return IOwnable(NATIVE_MINTER_ADDR).initialized();
+        return INativeMinter(NATIVE_MINTER_ADDR).initialized();
     }
 
     function testMinterInitializeOwner(address owner) external returns (bool) {
-        return IOwnable(NATIVE_MINTER_ADDR).initializeOwner(owner);
+        return INativeMinter(NATIVE_MINTER_ADDR).initializeOwner(owner);
     }
 
     function testMinterTransferOwnership(
         address newOwner
     ) external returns (bool) {
-        return IOwnable(NATIVE_MINTER_ADDR).transferOwnership(newOwner);
+        return INativeMinter(NATIVE_MINTER_ADDR).transferOwnership(newOwner);
     }
 
     // AddressRegistry
