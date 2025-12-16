@@ -4,7 +4,7 @@ async function main() {
     const rpcUrl = "http://localhost:8545";
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     // Account 0xf17f... (ae6ae...)
-    const privateKey = "A2";
+    const privateKey = "";
     const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log("Checking for stuck transactions...");
