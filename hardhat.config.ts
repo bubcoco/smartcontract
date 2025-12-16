@@ -34,7 +34,6 @@ const config: HardhatUserConfig = {
               name: "Loaffinity Explorer",
               url: "http://localhost",
               apiUrl: "http://localhost:4000/api",
-              gas: 4000000,
             },
           },
         },
@@ -142,7 +141,7 @@ const config: HardhatUserConfig = {
     dlt: {
       type: "http",
       url: "https://dlp-rpc2-testnet.adldigitalservice.com",
-      accounts: ["9f3d5b4c29b8a7d63a8b7a63dfb0c6c1b8e9a7d63a8b7a63dfb0c6c1b8e9a7d6"],
+      accounts: [configVariable("DLT_KEY")],
       chainId: 116687680,
       gasPrice: 0,
     },
@@ -163,9 +162,11 @@ const config: HardhatUserConfig = {
       type: "http",
       chainId: 235,
       chainType: "l1",
-      accounts: [configVariable("PRIV_KEY")],
+      // accounts: [configVariable("PRIV_KEY")],
+      // accounts: [configVariable("Validator2")],
+      accounts: [configVariable("Validator1")],
       url: 'http://localhost:8545',
-
+      // gasPrice: 10000000000000,
     },
   },
 };
