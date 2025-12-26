@@ -21,10 +21,10 @@ dotenvConfig({ path: resolve(__dirname, "../.env") });
 // ===================== CONFIGURATION =====================
 const CONFIG = {
   // Network RPC
-  rpcUrl: "http://localhost:8545",
+  rpcUrl: process.env.RPC_URL || "http://localhost:8545",
 
-  // Private key from genesis (pre-funded account)
-  privateKey: process.env.PRIV_KEY || "ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f",
+  // Private key from .env (required)
+  privateKey: process.env.PRIV_KEY || process.env.ADMIN,
 
   // ========== HIGH TPS SETTINGS ==========
   // More accounts = more parallel transactions = higher TPS
@@ -554,6 +554,12 @@ async function main() {
   console.log("\n" + "=".repeat(80));
   console.log("🔥 BESU QBFT HIGH-PERFORMANCE BENCHMARK");
   console.log("=".repeat(80));
+
+  // Validate private key
+  if (!CONFIG.privateKey) {
+    throw new Error("PRIV_KEY environment variable not set. Please add it to .env file.");
+  }
+
   console.log(`Target TPS: ${CONFIG.targetTPS}`);
   console.log(`Transactions per test: ${CONFIG.totalTransactions}`);
   console.log(`Parallel Accounts: ${CONFIG.numAccounts}`);
