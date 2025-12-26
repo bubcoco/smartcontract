@@ -1,0 +1,51 @@
+{
+  "config": {
+    "rpcUrl": "http://localhost:8545",
+    "privateKey": "0f7583c81b2ddcdda03f56ff0d522551926e1a882e66b74b72b8e4bb3b0ed69c",
+    "numAccounts": 20,
+    "totalTransactions": 300,
+    "targetTPS": 200,
+    "benchmarks": {
+      "nativeTransfer": true,
+      "counterInc": true,
+      "counterIncBy": false
+    },
+    "confirmationWait": 20,
+    "cooldownTime": 10,
+    "outputDir": "./benchmark/reports",
+    "gasLimit": "100000",
+    "gasPrice": "1000000000000"
+  },
+  "results": [
+    {
+      "name": "Native Transfer",
+      "duration": 41557,
+      "totalTx": 361,
+      "successTx": 300,
+      "failedTx": 61,
+      "avgLatency": 6500.97,
+      "minLatency": 2378,
+      "maxLatency": 11497,
+      "p95Latency": 10473,
+      "p99Latency": 11103,
+      "actualTPS": 8.686863825588949,
+      "throughput": 7.219000409076689,
+      "successRate": 83.10249307479224
+    },
+    {
+      "name": "Counter.inc()",
+      "duration": 41211,
+      "totalTx": 347,
+      "successTx": 300,
+      "failedTx": 47,
+      "avgLatency": 6780.446666666667,
+      "minLatency": 1624,
+      "maxLatency": 13722,
+      "p95Latency": 12412,
+      "p99Latency": 13479,
+      "actualTPS": 8.420082016937226,
+      "throughput": 7.279609812914028,
+      "successRate": 86.45533141210375
+    }
+  ]
+}

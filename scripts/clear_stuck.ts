@@ -1,10 +1,19 @@
 import { ethers } from "ethers";
+import { config as dotenvConfig } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+// Load environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenvConfig({ path: resolve(__dirname, "../.env") });
 
 async function main() {
     const rpcUrl = "http://localhost:8545";
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    // Account 0xf17f... (ae6ae...)
-    const privateKey = "";
+    // Account for clearing stuck transactions - uses PRIV_KEY2
+    const privateKey = process.env.PRIV_KEY2 || process.env.PRIV_KEY;
+    if (!privateKey) throw new Error("PRIV_KEY2 or PRIV_KEY environment variable not set. Please add it to .env file.");
     const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log("Checking for stuck transactions...");

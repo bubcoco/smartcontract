@@ -28,22 +28,8 @@ contract PrecompileTester {
     receive() external payable {}
 
     // NativeMinter
-    function testMint(
-        address to,
-        uint256 value
-    ) external returns (bool) {
+    function testMint(address to, uint256 value) external returns (bool) {
         return INativeMinter(NATIVE_MINTER_ADDR).mint(to, value);
-    }
-
-    function testMinterInitializeOwnerAndSupply(
-        address owner,
-        uint256 totalSupply
-    ) external returns (bool) {
-        return
-            IOwnable(NATIVE_MINTER_ADDR).initializeOwnerAndSupply(
-                owner,
-                totalSupply
-            );
     }
 
     // function testMinterOwner() external view returns (address) {

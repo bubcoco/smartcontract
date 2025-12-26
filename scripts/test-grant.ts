@@ -1,4 +1,12 @@
 import { ethers } from "ethers";
+import { config as dotenvConfig } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+// Load environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenvConfig({ path: resolve(__dirname, "../.env") });
 
 /**
  * Test script for NativeMinter Precompile at address 0x0000000000000000000000000000000000001001
@@ -27,7 +35,8 @@ async function main() {
 
     // Setup provider and wallet
     const rpcUrl = "http://localhost:8545";
-    const privateKey = "";
+    const privateKey = process.env.PRIV_KEY;
+    if (!privateKey) throw new Error("PRIV_KEY environment variable not set. Please add it to .env file.");
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey, provider);

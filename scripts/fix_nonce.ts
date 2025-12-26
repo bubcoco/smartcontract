@@ -1,16 +1,28 @@
-import { configDotenv } from "dotenv";
 import { ethers } from "ethers";
-configDotenv();
+import { config as dotenvConfig } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+// Load environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenvConfig({ path: resolve(__dirname, "../.env") });
 
 async function main() {
     const rpcUrl = "http://localhost:8545"; // Make sure this matches hardhat config
     const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-    // List of private keys to check and fix
-    const privateKeys = [
-        "A1", // Account 1
-        "A2"  // Account 2
-    ];
+    // Load private keys from environment
+    // PRIV_KEY is the primary key, PRIV_KEY2 is optional secondary key
+    const privateKeys: string[] = [];
+    if (process.env.PRIV_KEY) privateKeys.push(process.env.PRIV_KEY);
+    if (process.env.PRIV_KEY2) privateKeys.push(process.env.PRIV_KEY2);
+
+    if (privateKeys.length === 0) {
+        throw new Error("No private keys found. Please set PRIV_KEY (and optionally PRIV_KEY2) in .env file.");
+    }
+
+    console.log(`Found ${privateKeys.length} private key(s) to process.`);
 
     for (const pk of privateKeys) {
         const wallet = new ethers.Wallet(pk, provider);
