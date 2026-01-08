@@ -13,10 +13,14 @@ import * as fs from "fs";
 import { config as dotenvConfig } from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { loadDeployedAddresses } from "./deployed-addresses.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenvConfig({ path: resolve(__dirname, "../.env") });
+
+// Load deployed contract addresses from Ignition
+const deployedAddresses = loadDeployedAddresses();
 
 // ===================== CONFIGURATION =====================
 const CONFIG = {
