@@ -35,7 +35,7 @@ RPC_URL=http://localhost:8545
 
 ## Deployment
 
-### Deploy All Contracts to Loaffinity Network
+### Deploy All Contracts to Besu Network
 
 ```bash
 ./deploy-all.sh
@@ -57,15 +57,15 @@ Clears Ignition deployment cache and compiled artifacts.
 
 ```bash
 # Deploy individual modules
-npx hardhat ignition deploy ignition/modules/MemberCard.ts --network loaffinity
-npx hardhat ignition deploy ignition/modules/ContractFactory2.ts --network loaffinity
-npx hardhat ignition deploy ignition/modules/Token.ts --network loaffinity
+npx hardhat ignition deploy ignition/modules/MemberCard.ts --network besu
+npx hardhat ignition deploy ignition/modules/ContractFactory2.ts --network besu
+npx hardhat ignition deploy ignition/modules/Token.ts --network besu
 ```
 
 ### Verify Contracts
 
 ```bash
-npx hardhat verify --network loaffinity <CONTRACT_ADDRESS> [constructor args...]
+npx hardhat verify --network besu <CONTRACT_ADDRESS> [constructor args...]
 ```
 
 ---
@@ -148,9 +148,9 @@ Reports are saved to `benchmark/reports/` in both JSON and HTML formats.
 
 ## Network Configuration
 
-### Loaffinity Network (Chain ID: 235)
+### Besu Network (Chain ID: 235)
 ```typescript
-loaffinity: {
+besu: {
   type: "http",
   chainId: 235,
   url: 'http://localhost:8545',
