@@ -625,6 +625,7 @@ function generateReport(result: BenchmarkResult, accounts: AccountState[]): void
   const configForJson = {
     ...CONFIG,
     gasLimit: CONFIG.gasLimit.toString(),
+    gasPrice: CONFIG.gasPrice.toString(),
     initialFunding: CONFIG.initialFunding.toString(),
     targetSpend: CONFIG.targetSpend.toString(),
     txAmount: CONFIG.txAmount.toString(),
