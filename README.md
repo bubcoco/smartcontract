@@ -1,6 +1,6 @@
 # Smart Contract Project
 
-This project contains smart contracts and benchmarking tools for the Loaffinity blockchain network (Besu QBFT).
+This project contains smart contracts and benchmarking tools for the Private blockchain network (Besu QBFT).
 
 ## Project Overview
 
