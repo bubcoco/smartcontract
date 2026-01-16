@@ -1,0 +1,64 @@
+{
+  "config": {
+    "numAccounts": 5,
+    "txPerTest": 30,
+    "gasPrice": "1000000000000",
+    "rpcUrl": "http://localhost:8545"
+  },
+  "results": [
+    {
+      "name": "Native ETH Transfers",
+      "totalTx": 30,
+      "successTx": 30,
+      "failedTx": 0,
+      "duration": 139993,
+      "tps": 0.21429642910716964,
+      "avgLatency": 4661.7,
+      "nonceGapsDetected": 0,
+      "errors": []
+    },
+    {
+      "name": "Contract Calls (Counter.inc)",
+      "totalTx": 30,
+      "successTx": 30,
+      "failedTx": 0,
+      "duration": 127420,
+      "tps": 0.23544184586407158,
+      "avgLatency": 4241.8,
+      "nonceGapsDetected": 0,
+      "errors": []
+    },
+    {
+      "name": "ERC20 Transfers",
+      "totalTx": 30,
+      "successTx": 30,
+      "failedTx": 0,
+      "duration": 149758,
+      "tps": 0.20032318807676383,
+      "avgLatency": 4988,
+      "nonceGapsDetected": 0,
+      "errors": []
+    },
+    {
+      "name": "ERC721 Minting",
+      "totalTx": 0,
+      "successTx": 0,
+      "failedTx": 0,
+      "duration": 0,
+      "tps": 0,
+      "avgLatency": 0,
+      "nonceGapsDetected": 0,
+      "errors": [
+        "transaction execution reverted (action=\"sendTransaction\", data=null, reason=null, invocation=null, revert=null, transaction={ \"data\": \"\", \"from\": \"0xAe76b11CEcE311717934938510327203a373E826\", \"to\": \"0xC9e2712a8FF38B5e8dae58a002A0254750282365\" }, receipt={ \"_type\": \"TransactionReceipt\", \"blobGasPrice\": null, \"blobGasUsed\": null, \"blockHash\": \"0x2b9954646640ab14a64767a2081947282bc4dc02f789f86a0052dfa69959f5f3\", \"blockNumber\": 375, \"contractAddress\": null, \"cumulativeGasUsed\": \"24450\", \"from\": \"0xAe76b11CEcE311717934938510327203a373E826\", \"gasPrice\": \"1000000000000\", \"gasUsed\": \"24450\", \"hash\": \"0xa5f48c49da49b2a93985eb01fb8a42a1b062ba15f9a5407e9145b1cfecc1bfd2\", \"index\": 0, \"logs\": [  ], \"logsBloom\": \"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"root\": null, \"status\": 0, \"to\": \"0xC9e2712a8FF38B5e8dae58a002A0254750282365\" }, code=CALL_EXCEPTION, version=6.15.0)"
+      ]
+    }
+  ],
+  "summary": {
+    "totalTransactions": 90,
+    "totalSuccess": 90,
+    "totalFailed": 0,
+    "totalNonceGaps": 0,
+    "productionReady": true
+  },
+  "timestamp": "2026-01-16T08:16:13.278Z"
+}

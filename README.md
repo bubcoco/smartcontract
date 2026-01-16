@@ -33,9 +33,46 @@ RPC_URL=http://localhost:8545
 
 ---
 
-## Deployment
+## Shell Scripts
 
-### Deploy All Contracts to Besu Network
+The project includes several shell scripts for deployment and management:
+
+| Script | Purpose |
+|--------|---------|
+| `deploy.sh` | Interactive deployment script with flags for deploy, verify, and worker management |
+| `deploy-all.sh` | Deploy and verify all contracts (MemberCard, ContractFactory2, Token) |
+| `reset.sh` | Clear Ignition deployment cache and compiled artifacts |
+
+### deploy.sh - Interactive Deployment
+
+```bash
+# Show help
+./deploy.sh -h
+
+# Deploy a contract
+./deploy.sh -n besu -t MemberCard -D
+
+# Verify a contract
+./deploy.sh -n besu -t MemberCard -V
+
+# Deploy and verify
+./deploy.sh -n besu -t MemberCard -D -V
+
+# With specific address
+./deploy.sh -n besu -t MemberCard -a 0x... -V
+```
+
+**Flags:**
+- `-n <network>` - Network name (e.g., besu)
+- `-t <tags>` - Contract/module name
+- `-a <address>` - Contract address (optional)
+- `-p` - Is proxy contract
+- `-D` - Deploy contract
+- `-V` - Verify contract
+- `-W` - Grant worker role
+- `-B` - Grant BalanceVault worker
+
+### deploy-all.sh - Deploy All Contracts
 
 ```bash
 ./deploy-all.sh
@@ -45,13 +82,17 @@ This script will:
 1. **Phase 1**: Deploy MemberCard, ContractFactory2, and Token contracts
 2. **Phase 2**: Verify all contracts on Blockscout using addresses from `deployed_addresses.json`
 
-### Reset Deployment State
+### reset.sh - Reset Deployment State
 
 ```bash
 ./reset.sh
 ```
 
 Clears Ignition deployment cache and compiled artifacts.
+
+---
+
+## Deployment
 
 ### Manual Deployment
 
@@ -103,6 +144,7 @@ The `benchmark/` directory contains TPS benchmarking scripts for testing network
 | `benchmark5.ts` | Account Abstraction (ERC-4337) | Bundle - Simulated UserOperation bundling |
 | `benchmark6.ts` | Multicall / Batching | Batch - Parallel transactions per account |
 | `benchmark7.ts` | **Production Readiness Test** | Mixed - Validates nonce handling across all tx types |
+| `benchmark8.ts` | **Duration-Based Stress Test** | Aggressive - Maximum TPS stress test with duration control |
 
 ### Run Benchmarks
 
@@ -134,6 +176,11 @@ npx tsx benchmark/benchmark6.ts
 # Production Readiness Test (validates nonce handling)
 npx tsx benchmark/benchmark7.ts
 npx tsx benchmark/benchmark7.ts --accounts=10 --txPerTest=50
+
+# Duration-Based Stress Test (maximum TPS)
+npx tsx benchmark/benchmark8.ts
+npx tsx benchmark/benchmark8.ts --duration=120 --accounts=50
+npx tsx benchmark/benchmark8.ts --turbo  # Maximum aggression mode
 ```
 
 ### Production Readiness Test (benchmark7)
@@ -149,6 +196,25 @@ This test validates that the network is ready for production by:
 | ⚠️ ISSUES | Some failures but no nonce gaps |
 | ❌ FAIL | Nonce gaps detected - not production ready |
 
+### Duration-Based Stress Test (benchmark8)
+
+Combines the best of benchmark3 and benchmark7 for maximum stress testing:
+- **Duration-based**: Run for a specified number of seconds
+- **Fire-and-forget**: Sends transactions without blocking for confirmation
+- **Async tracking**: Confirmations tracked asynchronously
+- **Nonce recovery**: Auto-recovers from nonce issues
+- **Turbo mode**: `--turbo` flag for maximum aggression (50 accounts, 30 pending/account)
+
+```bash
+# Default 60 second test
+npx tsx benchmark/benchmark8.ts
+
+# Custom duration and accounts
+npx tsx benchmark/benchmark8.ts --duration=120 --accounts=30 --pending=15
+
+# Maximum aggression mode
+npx tsx benchmark/benchmark8.ts --turbo
+```
 
 ### Benchmark Configuration
 
