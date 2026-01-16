@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Besu Balance-Based Benchmark</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', system-ui, sans-serif; 
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      min-height: 100vh; color: #fff; padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { 
+      text-align: center; margin-bottom: 0.5rem; font-size: 2.5rem;
+      background: linear-gradient(90deg, #ffd700, #ff8c00);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .subtitle { text-align: center; color: #aaa; margin-bottom: 2rem; }
+    .strategy { 
+      background: rgba(255,215,0,0.1); border-left: 4px solid #ffd700; 
+      padding: 1rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;
+    }
+    .strategy strong { color: #ffd700; }
+    .peak {
+      background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,140,0,0.2));
+      border: 2px solid #ffd700; border-radius: 20px; padding: 2rem;
+      margin-bottom: 2rem; text-align: center;
+    }
+    .peak h2 { color: #ffd700; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .peak .tps { font-size: 4rem; font-weight: 800; color: #ffd700; }
+    .peak .label { color: #aaa; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;
+      text-align: center;
+    }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: #ffd700; }
+    .stat-card .label { color: #aaa; font-size: 0.85rem; }
+    .accounts {
+      background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;
+    }
+    .accounts h3 { color: #ffd700; margin-bottom: 1rem; }
+    .account-row { display: flex; justify-content: space-between; padding: 0.5rem 0; 
+      border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .account-row:last-child { border-bottom: none; }
+    .complete { color: #4ade80; }
+    .incomplete { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💰 Balance-Based Benchmark</h1>
+    <p class="subtitle">Each account sends until 10 ETH transferred | 1/15/2026, 2:33:46 PM</p>
+    
+    <div class="strategy">
+      <strong>📊 Strategy:</strong> Each of 10 accounts sends 0.1 ETH 
+      transactions until they've transferred 10.0 ETH total. 
+      This measures sustained throughput over time.
+    </div>
+    
+    <div class="peak">
+      <h2>🚀 Confirmed TPS</h2>
+      <div class="tps">0.7</div>
+      <div class="label">transactions per second</div>
+    </div>
+    
+    <div class="stats">
+      <div class="stat-card">
+        <div class="value">716</div>
+        <div class="label">Confirmed TX</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">71.6</div>
+        <div class="label">ETH Transferred</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">17.00m</div>
+        <div class="label">Duration</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">2.41s</div>
+        <div class="label">P50 Latency</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">0/10</div>
+        <div class="label">Accounts Done</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">0.1%</div>
+        <div class="label">Success Rate</div>
+      </div>
+    </div>
+    
+    <div class="accounts">
+      <h3>📋 Account Details</h3>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 1</span>
+          <span>71 tx</span>
+          <span>7.1 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 2</span>
+          <span>71 tx</span>
+          <span>7.1 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 3</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 4</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 5</span>
+          <span>71 tx</span>
+          <span>7.1 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 6</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 7</span>
+          <span>71 tx</span>
+          <span>7.1 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 8</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 9</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+        <div class="account-row">
+          <span class="incomplete">⏳ Account 10</span>
+          <span>72 tx</span>
+          <span>7.2 ETH</span>
+        </div>
+      
+    </div>
+  </div>
+</body>
+</html>

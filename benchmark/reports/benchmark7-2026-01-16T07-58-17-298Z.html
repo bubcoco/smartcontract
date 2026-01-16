@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Besu Maximum Stress Test Results</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', system-ui, sans-serif; 
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      min-height: 100vh; color: #fff; padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { 
+      text-align: center; margin-bottom: 0.5rem; font-size: 2.5rem;
+      background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .subtitle { text-align: center; color: #888; margin-bottom: 2rem; }
+    .peak {
+      background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(72,219,251,0.2));
+      border: 2px solid #48dbfb; border-radius: 20px; padding: 2rem;
+      margin-bottom: 2rem; text-align: center;
+    }
+    .peak h2 { color: #48dbfb; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .peak .tps { font-size: 5rem; font-weight: 800; 
+      background: linear-gradient(90deg, #ff6b6b, #feca57);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .peak .label { color: #888; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;
+      text-align: center; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #48dbfb; }
+    .stat-card .label { color: #888; font-size: 0.85rem; }
+    .stat-card.success .value { color: #2ed573; }
+    .stat-card.warning .value { color: #feca57; }
+    .stat-card.error .value { color: #ff6b6b; }
+    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    th { background: rgba(72,219,251,0.2); color: #48dbfb; }
+    tr:hover { background: rgba(255,255,255,0.05); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Maximum Stress Test</h1>
+    <p class="subtitle">20 accounts | 120s duration | 2026-01-16T07:58:17.306Z</p>
+    
+    <div class="peak">
+      <h2>🚀 Confirmed TPS</h2>
+      <div class="tps">0.0</div>
+      <div class="label">transactions per second confirmed on chain</div>
+    </div>
+    
+    <div class="stats">
+      <div class="stat-card success">
+        <div class="value">0</div>
+        <div class="label">Confirmed TX</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">3,905</div>
+        <div class="label">Total Sent</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="value">31.2</div>
+        <div class="label">Send Rate (tx/s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">213.0</div>
+        <div class="label">Peak Send Rate</div>
+      </div>
+      <div class="stat-card error">
+        <div class="value">3905</div>
+        <div class="label">Failed TX</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">0.00s</div>
+        <div class="label">P50 Latency</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">0.00s</div>
+        <div class="label">P95 Latency</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">0.0%</div>
+        <div class="label">Success Rate</div>
+      </div>
+    </div>
+    
+    <h3 style="color: #48dbfb; margin-bottom: 1rem;">📋 Account Performance</h3>
+    <table>
+      <tr>
+        <th>#</th>
+        <th>Address</th>
+        <th>Sent</th>
+        <th>Confirmed</th>
+        <th>Failed</th>
+        <th>Success Rate</th>
+      </tr>
+      
+        <tr>
+          <td>1</td>
+          <td>0xd3458e55...C2BA</td>
+          <td>193</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">193</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>2</td>
+          <td>0x734848B8...46D3</td>
+          <td>194</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">194</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>3</td>
+          <td>0x59F2Bb65...5105</td>
+          <td>197</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">197</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>4</td>
+          <td>0xC2b88060...5989</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>5</td>
+          <td>0xC449C2d9...370d</td>
+          <td>193</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">193</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>6</td>
+          <td>0xCa6BDa0b...3835</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>7</td>
+          <td>0xDf7a8619...D99F</td>
+          <td>195</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">195</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>8</td>
+          <td>0x84e46bEE...bf2c</td>
+          <td>195</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">195</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>9</td>
+          <td>0x426fcE6a...9824</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>10</td>
+          <td>0xFcaa0756...E17D</td>
+          <td>197</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">197</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>11</td>
+          <td>0xB7B1b492...D5D3</td>
+          <td>195</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">195</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>12</td>
+          <td>0x2Bd1BB0d...eB1d</td>
+          <td>195</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">195</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>13</td>
+          <td>0xa9e9b9F8...F9f1</td>
+          <td>194</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">194</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>14</td>
+          <td>0xf4969653...B490</td>
+          <td>194</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">194</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>15</td>
+          <td>0x5585B498...4152</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>16</td>
+          <td>0xfC20B31f...47fe</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>17</td>
+          <td>0xF62CF130...298F</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>18</td>
+          <td>0xCF9A6C9E...D262</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>19</td>
+          <td>0x1Ae0F05C...d107</td>
+          <td>195</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">195</td>
+          <td>0.0%</td>
+        </tr>
+      
+        <tr>
+          <td>20</td>
+          <td>0x7BA427f2...48a0</td>
+          <td>196</td>
+          <td style="color: #2ed573">0</td>
+          <td style="color: #ff6b6b">196</td>
+          <td>0.0%</td>
+        </tr>
+      
+    </table>
+  </div>
+</body>
+</html>

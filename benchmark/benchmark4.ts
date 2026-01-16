@@ -43,6 +43,7 @@ const CONFIG = {
   // Network RPC
   rpcUrl: process.env.RPC_URL || "http://localhost:8545",
 
+
   // Private key from .env (required)
   privateKey: process.env.PRIV_KEY || process.env.ADMIN,
 
@@ -781,7 +782,7 @@ async function main() {
   // Create provider with longer timeout (2 minutes per request)
   const provider = new ethers.JsonRpcProvider(CONFIG.rpcUrl, undefined, {
     staticNetwork: true,
-    batchMaxCount: 1,
+    batchMaxCount: 5,
   });
   // Set polling interval to reduce load
   provider.pollingInterval = 1000;

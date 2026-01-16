@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Besu Duration Stress Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); min-height: 100vh; color: #fff; padding: 2rem; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 2rem; font-size: 2rem; color: #00ff87; }
+    .peak { background: rgba(0,255,135,0.1); border: 2px solid #00ff87; border-radius: 20px; padding: 2rem; text-align: center; margin-bottom: 2rem; }
+    .peak .tps { font-size: 4rem; font-weight: 800; color: #00ff87; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; }
+    .card h2 { color: #60efff; margin-bottom: 1rem; }
+    .stat { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .stat-label { color: #888; }
+    .highlight { color: #00ff87; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Duration-Based Stress Test</h1>
+    <div class="peak">
+      <div>🏆 Peak Confirmed TPS</div>
+      <div class="tps">27.5</div>
+      <div>Counter.inc()</div>
+    </div>
+    <div class="grid">
+      
+        <div class="card">
+          <h2>Native Transfer</h2>
+          <div class="stat"><span class="stat-label">Duration</span><span>74.03s</span></div>
+          <div class="stat"><span class="stat-label">Sent</span><span>1349</span></div>
+          <div class="stat"><span class="stat-label">Confirmed</span><span class="highlight">1349</span></div>
+          <div class="stat"><span class="stat-label">Confirmed TPS</span><span class="highlight">18.22</span></div>
+          <div class="stat"><span class="stat-label">Success Rate</span><span>100.0%</span></div>
+          <div class="stat"><span class="stat-label">P50 Latency</span><span>27.46s</span></div>
+        </div>
+      
+        <div class="card">
+          <h2>Counter.inc()</h2>
+          <div class="stat"><span class="stat-label">Duration</span><span>65.31s</span></div>
+          <div class="stat"><span class="stat-label">Sent</span><span>1799</span></div>
+          <div class="stat"><span class="stat-label">Confirmed</span><span class="highlight">1799</span></div>
+          <div class="stat"><span class="stat-label">Confirmed TPS</span><span class="highlight">27.55</span></div>
+          <div class="stat"><span class="stat-label">Success Rate</span><span>100.0%</span></div>
+          <div class="stat"><span class="stat-label">P50 Latency</span><span>4.99s</span></div>
+        </div>
+      
+    </div>
+  </div>
+</body>
+</html>

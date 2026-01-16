@@ -1,0 +1,36 @@
+{
+  "config": {
+    "testDuration": 60,
+    "numAccounts": 50,
+    "maxPendingPerAccount": 30
+  },
+  "results": [
+    {
+      "name": "Native Transfer",
+      "duration": 74361,
+      "totalSent": 1143,
+      "totalConfirmed": 1143,
+      "totalFailed": 0,
+      "confirmedTPS": 15.370960584177189,
+      "sendTPS": 15.370960584177189,
+      "avgLatency": 5875.6990376202975,
+      "p50Latency": 5453,
+      "p95Latency": 10258,
+      "successRate": 100
+    },
+    {
+      "name": "Counter.inc()",
+      "duration": 65759,
+      "totalSent": 1000,
+      "totalConfirmed": 1000,
+      "totalFailed": 0,
+      "confirmedTPS": 15.207043902735746,
+      "sendTPS": 15.207043902735746,
+      "avgLatency": 5467.15,
+      "p50Latency": 5188,
+      "p95Latency": 9385,
+      "successRate": 100
+    }
+  ],
+  "timestamp": "2026-01-16T05:16:56.335Z"
+}

@@ -1,0 +1,94 @@
+{
+  "config": {
+    "rpcUrl": "http://localhost:8545",
+    "privateKey": "0f7583c81b2ddcdda03f56ff0d522551926e1a882e66b74b72b8e4bb3b0ed69c",
+    "numAccounts": 10,
+    "initialFunding": "15000000000000000000",
+    "targetSpend": "10000000000000000000",
+    "txAmount": "100000000000000000",
+    "maxPendingPerAccount": 1,
+    "gasLimit": "21000",
+    "gasPrice": "1000000000000",
+    "timeoutMs": 900000,
+    "outputDir": "./benchmark/reports",
+    "nonceRefreshThreshold": 3
+  },
+  "result": {
+    "name": "Balance-Based Benchmark",
+    "duration": 1019784,
+    "totalTx": 896992,
+    "successTx": 716,
+    "failedTx": 896276,
+    "totalEthTransferred": "71.6",
+    "avgLatency": 3580.304469273743,
+    "minLatency": 980,
+    "maxLatency": 13580,
+    "p50Latency": 2414,
+    "p95Latency": 6568,
+    "confirmedTPS": 0.7021094663183576,
+    "accountsCompleted": 0,
+    "successRate": 0.07982233955263815
+  },
+  "accounts": [
+    {
+      "address": "0xca040C316582B0354835Af3C824B9AcBC985147B",
+      "txCount": 71,
+      "totalSent": "7100000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0xc86536a1b3D9fcdE1cD488584863E5F640028e91",
+      "txCount": 71,
+      "totalSent": "7100000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0x9E4de47734f235a099C54c0030aAe7820D3d36a1",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0xd2D362055d3661C96569DAd9F2450B4f77C1fcE9",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0x78578f06D68D614D308C80BEE952D26B92e0616E",
+      "txCount": 71,
+      "totalSent": "7100000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0x3Ea1E7b4B7f9E841C00a0a8B9ff5FED1ca814a5F",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0xf5DA79E0159df02A519C1eF1b8B148dFb5817097",
+      "txCount": 71,
+      "totalSent": "7100000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0xE5DeFe6BC3aef74771314f43A50D814e8C6106c5",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0x790413dcca94C65a8cC877aEe16B61141caEC89F",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    },
+    {
+      "address": "0xac213ABB330320FeADcE993108F472B150D67E63",
+      "txCount": 72,
+      "totalSent": "7200000000000000000",
+      "isComplete": false
+    }
+  ]
+}

@@ -96,10 +96,13 @@ The `benchmark/` directory contains TPS benchmarking scripts for testing network
 
 | Script | Purpose | Transaction Type |
 |--------|---------|------------------|
-| `benchmark.ts` | High-performance TPS testing | Native transfers + Counter.inc() |
-| `benchmark2.ts` | Advanced operations | ERC20 transfers, minting, factory creation |
-| `benchmark3.ts` | Confirmation-based TPS | Waits for each tx confirmation |
-| `benchmark4.ts` | Sustained throughput | Balance-based (10 ETH per account) |
+| `benchmark.ts` | High-performance TPS testing | Single (Parallel) - Native transfers + Counter.inc() |
+| `benchmark2.ts` | Advanced operations | Single (Parallel) - ERC20 transfers, minting, factory creation |
+| `benchmark3.ts` | Confirmation-based TPS | Single (Parallel with await) - Waits for each tx confirmation |
+| `benchmark4.ts` | Sustained throughput | Single (Sequential per account) - Balance-based (10 ETH per account) |
+| `benchmark5.ts` | Account Abstraction (ERC-4337) | Bundle - Simulated UserOperation bundling |
+| `benchmark6.ts` | Multicall / Batching | Batch - Parallel transactions per account |
+| `benchmark7.ts` | **Production Readiness Test** | Mixed - Validates nonce handling across all tx types |
 
 ### Run Benchmarks
 
@@ -121,7 +124,31 @@ npx tsx benchmark/benchmark4.ts --fresh
 
 # Clear stuck pending transactions
 npx tsx benchmark/benchmark4.ts --clear
+
+# Account Abstraction (ERC-4337 style bundling)
+npx tsx benchmark/benchmark5.ts
+
+# Multicall / Batched transactions comparison
+npx tsx benchmark/benchmark6.ts
+
+# Production Readiness Test (validates nonce handling)
+npx tsx benchmark/benchmark7.ts
+npx tsx benchmark/benchmark7.ts --accounts=10 --txPerTest=50
 ```
+
+### Production Readiness Test (benchmark7)
+
+This test validates that the network is ready for production by:
+- Testing native ETH transfers, contract calls, ERC20 transfers, and ERC721 minting
+- Verifying **no nonce gaps** occur during operations
+- Generating a PASS/FAIL report for production deployment
+
+| Result | Meaning |
+|--------|---------|
+| ✅ PASS | No nonce gaps, all transactions successful |
+| ⚠️ ISSUES | Some failures but no nonce gaps |
+| ❌ FAIL | Nonce gaps detected - not production ready |
+
 
 ### Benchmark Configuration
 
