@@ -19,7 +19,7 @@
 # Hardhat coverage reports
 /coverage
 /oldscripts
-/ignition/deployments
+/ignition/deployments/*
 
 .env
 
@@ -27,4 +27,4 @@ script.txt
 
 deploy.sh
 /benchmark/test-accounts.json
-/benchmark/reports
+/benchmark/reports/*
