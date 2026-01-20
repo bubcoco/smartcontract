@@ -186,8 +186,9 @@ npx tsx benchmark/benchmark8.ts --turbo  # Maximum aggression mode
 ### Production Readiness Test (benchmark7)
 
 This test validates that the network is ready for production by:
-- Testing native ETH transfers, contract calls, ERC20 transfers, and ERC721 minting
+- Testing native ETH transfers, contract calls, ERC20 transfers, ERC721 minting, and **multiple contract deployments**
 - Verifying **no nonce gaps** occur during operations
+- Testing both sequential and parallel contract deployments
 - Generating a PASS/FAIL report for production deployment
 
 | Result | Meaning |

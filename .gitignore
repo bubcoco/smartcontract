@@ -27,3 +27,4 @@ script.txt
 
 deploy.sh
 /benchmark/test-accounts.json
+/benchmark/reports

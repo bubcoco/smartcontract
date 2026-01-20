@@ -741,6 +741,167 @@ async function testERC721Minting(
     };
 }
 
+// ===================== TEST 5: MULTIPLE CONTRACT DEPLOYMENTS =====================
+async function testMultipleContractDeployments(
+    accounts: AccountState[],
+    provider: ethers.JsonRpcProvider,
+    mainWallet: Wallet
+): Promise<TestResult> {
+    console.log("\n" + "=".repeat(60));
+    console.log("📦 TEST 5: Multiple Contract Deployments");
+    console.log("=".repeat(60));
+
+    const txRecords: TxRecord[] = [];
+    const errors: string[] = [];
+    const startTime = Date.now();
+
+    // Number of contracts to deploy (reduced for gas efficiency)
+    const numContracts = Math.min(CONFIG.txPerTest, 10);
+    console.log(`   Deploying ${numContracts} Counter contracts...`);
+
+    // Deploy from main wallet
+    let mainNonce = await provider.getTransactionCount(mainWallet.address, "pending");
+
+    for (let i = 0; i < numContracts; i++) {
+        const sendTime = Date.now();
+
+        try {
+            // Deploy Counter contract
+            const factory = new ethers.ContractFactory(COUNTER_ABI, COUNTER_BYTECODE, mainWallet);
+            const deployTx = await factory.getDeployTransaction({ gasPrice: CONFIG.gasPrice, gasLimit: 500000n });
+
+            const tx = await mainWallet.sendTransaction({
+                ...deployTx,
+                nonce: mainNonce,
+            });
+
+            mainNonce++;
+            const receipt = await tx.wait();
+
+            txRecords.push({
+                hash: tx.hash,
+                sendTime,
+                confirmTime: Date.now(),
+                success: receipt?.status === 1,
+                nonce: mainNonce - 1,
+                accountIndex: 0,
+            });
+
+            process.stdout.write(`\r   Deployed: ${i + 1}/${numContracts}`);
+
+        } catch (error: any) {
+            errors.push(`Contract deploy failed: ${error.message.substring(0, 100)}`);
+            txRecords.push({
+                hash: "",
+                sendTime,
+                success: false,
+                error: error.message,
+                nonce: mainNonce,
+                accountIndex: 0,
+            });
+
+            // Refresh nonce to prevent gaps
+            mainNonce = await provider.getTransactionCount(mainWallet.address, "pending");
+        }
+    }
+
+    console.log("");
+
+    // Also test deploying from multiple accounts in parallel
+    console.log(`   Testing parallel deployments from ${accounts.length} accounts...`);
+
+    // Refresh all account nonces
+    for (const acc of accounts) {
+        acc.expectedNonce = await provider.getTransactionCount(acc.address, "pending");
+    }
+
+    const parallelDeployPromises: Promise<void>[] = [];
+
+    for (const account of accounts) {
+        const deployPromise = (async () => {
+            const sendTime = Date.now();
+
+            try {
+                const factory = new ethers.ContractFactory(COUNTER_ABI, COUNTER_BYTECODE, account.wallet);
+                const deployTx = await factory.getDeployTransaction({ gasPrice: CONFIG.gasPrice, gasLimit: 500000n });
+
+                const tx = await account.wallet.sendTransaction({
+                    ...deployTx,
+                    nonce: account.expectedNonce,
+                });
+
+                account.expectedNonce++;
+                const receipt = await tx.wait();
+
+                txRecords.push({
+                    hash: tx.hash,
+                    sendTime,
+                    confirmTime: Date.now(),
+                    success: receipt?.status === 1,
+                    nonce: account.expectedNonce - 1,
+                    accountIndex: accounts.indexOf(account),
+                });
+
+            } catch (error: any) {
+                errors.push(`Parallel deploy failed: ${error.message.substring(0, 80)}`);
+                txRecords.push({
+                    hash: "",
+                    sendTime,
+                    success: false,
+                    error: error.message,
+                    nonce: account.expectedNonce,
+                    accountIndex: accounts.indexOf(account),
+                });
+
+                account.expectedNonce = await provider.getTransactionCount(account.address, "pending");
+            }
+        })();
+
+        parallelDeployPromises.push(deployPromise);
+    }
+
+    await Promise.all(parallelDeployPromises);
+    console.log(`   ✅ Parallel deployments complete`);
+
+    // Verify no nonce gaps for all accounts
+    const { gaps, details } = await verifyNonces(accounts, provider);
+
+    // Also check main wallet
+    const mainFinalNonce = await provider.getTransactionCount(mainWallet.address, "pending");
+    const mainConfirmedNonce = await provider.getTransactionCount(mainWallet.address, "latest");
+    const mainGap = mainFinalNonce !== mainConfirmedNonce ? 1 : 0;
+    const totalGaps = gaps + mainGap;
+
+    if (totalGaps > 0) {
+        console.log(`   ⚠️ Nonce gaps detected: ${totalGaps}`);
+        if (details.length > 0) {
+            details.forEach(d => console.log(`      ${d}`));
+        }
+        if (mainGap > 0) {
+            console.log(`      Main wallet: pending=${mainFinalNonce}, confirmed=${mainConfirmedNonce}`);
+        }
+    } else {
+        console.log(`   ✅ No nonce gaps detected`);
+    }
+
+    const duration = Date.now() - startTime;
+    const successTx = txRecords.filter(r => r.success).length;
+    const latencies = txRecords.filter(r => r.confirmTime).map(r => r.confirmTime! - r.sendTime);
+    const avgLatency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+
+    return {
+        name: "Multiple Contract Deployments",
+        totalTx: txRecords.length,
+        successTx,
+        failedTx: txRecords.filter(r => !r.success).length,
+        duration,
+        tps: successTx / (duration / 1000),
+        avgLatency,
+        nonceGapsDetected: totalGaps,
+        errors: errors.slice(0, 5),
+    };
+}
+
 // ===================== REPORT =====================
 function generateReport(results: TestResult[]): void {
     if (!fs.existsSync(CONFIG.outputDir)) {
@@ -981,6 +1142,10 @@ async function main() {
 
     // Test 4: ERC721 minting
     results.push(await testERC721Minting(accounts, provider, mainWallet));
+    await sleep(3000);
+
+    // Test 5: Multiple contract deployments
+    results.push(await testMultipleContractDeployments(accounts, provider, mainWallet));
 
     // Generate report
     generateReport(results);
