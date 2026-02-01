@@ -1,0 +1,31 @@
+{
+  "network": "loaffinity",
+  "chainId": 235,
+  "tokens": {
+    "token0": "0x66F3d567C67614B782b75f3481a00e882283eEb5",
+    "token1": "0xC28a5F1Ae7Dd661192c6171335E5c71EC94d908C"
+  },
+  "pool": {
+    "address": "0x3C75c38f71373bCAeBd253A2Fd1d4ED1ffF8C08c",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "currentTick": 0
+  },
+  "position": {
+    "tokenId": "1",
+    "tickLower": -1020,
+    "tickUpper": 1020,
+    "liquidity": "201130731163884163436661"
+  },
+  "contracts": {
+    "factory": "0x1883bfd1a26497721D330cE6b3E7224ec3A465A5",
+    "positionManager": "0x0d7cc082214D4Aaf1367Ba7421CfF51C7ee0e818",
+    "swapRouter": "0x90CEFBA97CB6bfc910C8dc84f3551BF9aDE026A3"
+  },
+  "rebalancerEnv": {
+    "RPC_URL": "http://localhost:8545",
+    "POOL_ADDRESS": "0x3C75c38f71373bCAeBd253A2Fd1d4ED1ffF8C08c",
+    "POSITION_TOKEN_ID": "1",
+    "RANGE_WIDTH": "10"
+  }
+}
