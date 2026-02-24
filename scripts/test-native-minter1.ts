@@ -20,7 +20,6 @@ const NATIVE_MINTER_PRECOMPILE = "0x0000000000000000000000000000000000001001";
 // const TEST_RECIPIENT = "0x54e7Ef5795d350Ae257Af47FEdF211bC8b0C5621";
 const TEST_RECIPIENT = "0xAe76b11CEcE311717934938510327203a373E826";
 const MINT_AMOUNT = ethers.parseEther("1000"); // 1000 ETH
-const INITIAL_SUPPLY = ethers.parseEther("10000"); // Initial supply when initializing (0 = no initial mint)
 
 async function main() {
     console.log("╔════════════════════════════════════════════════════════════════════╗");
@@ -42,7 +41,7 @@ async function main() {
     const abi = [
         "function owner() view returns (address)",
         "function initialized() view returns (bool)",
-        "function initializeOwnerAndSupply(address initialOwner, uint256 initialSupply) returns (bool success, string message)",
+        "function initializeOwner(address initialOwner) returns (bool success, string message)",
         "function mint(address to, uint256 value) returns (bool success, string message)",
         "function totalSupply() view returns (uint256)",
         "function transferOwnership(address newOwner) returns (bool success)",
@@ -72,14 +71,12 @@ async function main() {
         console.log("2. Initialize Precompile");
         console.log("═══════════════════════════════════════════════════════════════════\n");
 
-        console.log(`   ⏳ Initializing with initializeOwnerAndSupply...`);
+        console.log(`   ⏳ Initializing with initializeOwner...`);
         console.log(`      Owner: ${wallet.address}`);
-        console.log(`      Initial Supply: ${ethers.formatEther(INITIAL_SUPPLY)} ETH`);
 
         try {
-            const initTx = await precompile.initializeOwnerAndSupply(
+            const initTx = await precompile.initializeOwner(
                 wallet.address,
-                INITIAL_SUPPLY,
                 txOptions
             );
             console.log(`\n   📤 TX: ${initTx.hash}`);

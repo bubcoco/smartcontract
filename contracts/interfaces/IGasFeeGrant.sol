@@ -54,8 +54,11 @@ interface IGasFeeGrant {
      * @param program The contract address associated with the grant.
      * @return True if the grant is successfully revoked, otherwise false.
      */
-    function revokeFeeGrant(address grantee, address program) external returns (bool);
-    
+    function revokeFeeGrant(
+        address grantee,
+        address program
+    ) external returns (bool);
+
     /**
      * @notice Returns the remaining gas fee allowance available before the current period resets.
      * @dev This function only applies to periodic allowances.
@@ -63,7 +66,10 @@ interface IGasFeeGrant {
      * @param program The contract address where the grant is applicable.
      * @return The amount of gas fees left to be spent before the period resets.
      */
-    function periodCanSpend(address grantee, address program) external view returns (uint256);
+    function periodCanSpend(
+        address grantee,
+        address program
+    ) external view returns (uint256);
 
     /**
      * @notice Retrieves the block number when the current spending period will reset.
@@ -72,7 +78,10 @@ interface IGasFeeGrant {
      * @param program The contract address where the grant is applicable.
      * @return The block number when the next spending period will reset.
      */
-    function periodReset(address grantee, address program) external view returns (uint256);
+    function periodReset(
+        address grantee,
+        address program
+    ) external view returns (uint256);
 
     /**
      * @notice Checks whether a fee grant has isExpired.
@@ -81,26 +90,34 @@ interface IGasFeeGrant {
      * @param program The contract address where the grant is applicable.
      * @return True if the grant has isExpired, otherwise `false`.
      */
-    function isExpired(address grantee, address program) external view returns (bool);
+    function isExpired(
+        address grantee,
+        address program
+    ) external view returns (bool);
 
     /**
      * @notice Checks whether a gas fee grant exists for a given grantee and program.
-     * @dev This function verifies if the specified grantee has been granted a gas fee allowance  
+     * @dev This function verifies if the specified grantee has been granted a gas fee allowance
      *      for transactions interacting with the specified contract address.
      * @param grantee The address that may have received a gas fee grant.
      * @param program The contract address for which the grant is being checked.
      * @return True if the grantee has an active gas fee grant for the specified contract, otherwise `false`.
      */
-    function isGrantedForProgram(address grantee, address program) external view returns (bool);
+    function isGrantedForProgram(
+        address grantee,
+        address program
+    ) external view returns (bool);
 
     /**
      * @notice Checks whether a gas fee grant exists for a given grantee across all programs.
-     * @dev This function verifies if the specified grantee has been granted a gas fee allowance  
+     * @dev This function verifies if the specified grantee has been granted a gas fee allowance
      *      for transactions interacting with any contract address.
      * @param grantee The address that may have received a gas fee grant.
      * @return True if the grantee has an active gas fee grant across all contracts, otherwise `false`.
      */
-    function isGrantedForAllProgram(address grantee) external view returns (bool);
+    function isGrantedForAllProgram(
+        address grantee
+    ) external view returns (bool);
 
     /**
      * @notice Retrieves the details of a gas fee grant.
@@ -109,5 +126,51 @@ interface IGasFeeGrant {
      * @param program The contract address where the grant is applicable.
      * @return grant details The `Grant` struct containing all relevant grant data.
      */
-    function grant(address grantee, address program) external view returns (Grant memory);
+    function grant(
+        address grantee,
+        address program
+    ) external view returns (Grant memory);
+
+    function isGrant(address from, address to) external returns (bool);
+
+    function getGranter(address from, address to) external returns (address);
+
+    /**
+     * @notice Adds a user to the gas fee grant whitelist.
+     * @param user The address of the user to add.
+     * @return success True if the operation was successful, otherwise false.
+     */
+    function addGrantUser(address user) external returns (bool success);
+
+    /**
+     * @notice Removes a user from the gas fee grant whitelist.
+     * @param user The address of the user to remove.
+     * @return success True if the operation was successful, otherwise false.
+     */
+    function removeGrantUser(address user) external returns (bool success);
+
+    /**
+     * @notice Adds a contract to the gas fee grant whitelist.
+     * @param contractAddress The address of the contract to add.
+     * @return success True if the operation was successful, otherwise false.
+     */
+    function addGrantContract(
+        address contractAddress
+    ) external returns (bool success);
+
+    /**
+     * @notice Removes a contract from the gas fee grant whitelist.
+     * @param contractAddress The address of the contract to remove.
+     * @return success True if the operation was successful, otherwise false.
+     */
+    function removeGrantContract(
+        address contractAddress
+    ) external returns (bool success);
+
+    /**
+     * @notice Checks if an address has been granted gas fee allowance.
+     * @param account The address to check.
+     * @return True if the address is granted, otherwise false.
+     */
+    function isGranted(address account) external view returns (bool);
 }

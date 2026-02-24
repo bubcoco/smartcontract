@@ -2,69 +2,78 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 /**
- * @title Interface Revenue Ratio Precompiled Contract
- * @author Blockchain Department @ Advanced Info Services PCL
+ * @title Interface Revenue Ratio Precompile Contract
+ * @author Kiwari Labs
  */
 
 interface IRevenueRatio {
     /**
-     * @notice Checks whether the revenue ratio is currently enabled.
-     * @dev Returns a boolean indicating if the revenue ratio is active.
-     * @return True if the system is enabled, otherwise false.
+     * @notice Enables the revenue ratio distribution mechanism.
+     * @return success True if the operation was successful, otherwise false.
      */
-    function status() external view returns (bool);
+    function enable() external returns (bool success);
 
     /**
-     * @notice Enables the revenue ratio.
-     * @dev Activates the system, allowing it to manage revenue ratio.
-     * @return True if the system was successfully enabled, otherwise false.
+     * @notice Disables the revenue ratio distribution mechanism.
+     * @return success True if the operation was successful, otherwise false.
      */
-    function enable() external returns (bool);
+    function disable() external returns (bool success);
 
     /**
-     * @notice Disables the revenue ratio.
-     * @dev Deactivates the system, preventing it from managing revenue ratio.
-     * @return True if the system was successfully disabled, otherwise false.
+     * @notice Sets the revenue ratio configuration.
+     * @param sender The ratio allocated to the sender.
+     * @param coinbase The ratio allocated to the coinbase (block producer).
+     * @param provider The ratio allocated to the provider.
+     * @param treasury The ratio allocated to the treasury.
+     * @return success True if the operation was successful, otherwise false.
      */
-    function disable() external returns (bool);
+    function setRevenueRatio(
+        uint256 sender,
+        uint256 coinbase,
+        uint256 provider,
+        uint256 treasury
+    ) external returns (bool success);
 
     /**
-     * @notice Retrieves the contract-specific revenue ratio.
-     * @dev Calls the precompiled contract to get the ratio for the smart contract.
-     * @return The revenue ratio as a uint256 value.
+     * @notice Returns the current sender ratio.
+     * @return The sender ratio value.
      */
-    function contractRatio() external view returns (uint256);
+    function senderRatio() external view returns (uint256);
 
     /**
-     * @notice Retrieves the coinbase-specific revenue ratio.
-     * @dev Calls the precompiled contract to get the ratio for the block's coinbase (block producer).
-     * @return The coinbase revenue ratio as a uint256 value.
+     * @notice Returns the current coinbase (block producer) ratio.
+     * @return The coinbase ratio value.
      */
     function coinbaseRatio() external view returns (uint256);
 
     /**
-     * @notice Retrieves the provider-specific revenue ratio.
-     * @dev Calls the precompiled contract to get the ratio for the service provider.
-     * @return The provider revenue ratio as a uint256 value.
+     * @notice Returns the current provider ratio.
+     * @return The provider ratio value.
      */
     function providerRatio() external view returns (uint256);
 
     /**
-     * @notice Retrieves the treasury revenue ratio.
-     * @dev Calls the precompiled contract to get the ratio for the treasury.
-     * @return The provider revenue ratio as a uint256 value.
+     * @notice Returns the current treasury ratio.
+     * @return The treasury ratio value.
      */
     function treasuryRatio() external view returns (uint256);
 
     /**
-     * @notice Sets new revenue ratios for the contract, coinbase, and provider.
-     * @dev Updates the revenue ratios to the specified values. Each ratio is provided as a percentage (0-100).
-     * The sum of all three ratios should not exceed 100% to ensure proper allocation.
-     * @param contractRatio The revenue ratio allocated to the contract, specified as a uint8 percentage (0-100).
-     * @param coinbaseRatio The revenue ratio allocated to the block producer (coinbase), specified as a uint8 percentage (0-100).
-     * @param providerRatio The revenue ratio allocated to the service provider, specified as a uint8 percentage (0-100).
-     * @param treasuryRatio The revenue ratio allocated to the treasury, specified as a uint8 percentage (0-100).
-     * @return True if the revenue ratios were successfully updated, otherwise false.
+     * @notice Returns the address of the current owner.
+     * @return The address of the owner.
      */
-    function setRevenueRatio(uint8 contractRatio, uint8 coinbaseRatio, uint8 providerRatio, uint8 treasuryRatio) external returns (bool);
+    function owner() external view returns (address);
+
+    /**
+     * @notice Returns the address of the current admin.
+     * @return The address of the admin.
+     */
+    function admin() external view returns (address);
+
+    /**
+     * @notice Transfers admin rights to a new address.
+     * @param newAdmin The address of the new admin.
+     * @return success True if the admin transfer was successful, otherwise false.
+     */
+    function transferAdmin(address newAdmin) external returns (bool success);
 }

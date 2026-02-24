@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
       // accounts: [configVariable("Validator2")],
       // accounts: [configVariable("Validator2")],
       url: 'http://localhost:8545',
-      // gasPrice: 100000000000000,
+      gasPrice: 100000000000, // 100 gwei
     },
   },
 };

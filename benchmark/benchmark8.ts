@@ -170,6 +170,7 @@ async function setupAccounts(
                     gasLimit: 21000n,
                     gasPrice: CONFIG.gasPrice,
                     nonce: mainNonce + j,
+                    type: 0,
                 });
                 await tx.wait();
             } catch (e) {
@@ -180,6 +181,7 @@ async function setupAccounts(
                     value: CONFIG.fundAmount,
                     gasLimit: 21000n,
                     gasPrice: CONFIG.gasPrice,
+                    type: 0,
                 });
                 await tx.wait();
             }
@@ -455,6 +457,15 @@ function generateHTML(results: BenchmarkResult[], maxTPS: number, bestName: stri
 </html>`;
 }
 
+// GasPrice Precompile
+const GAS_PRICE_PRECOMPILE_ADDRESS = "0x0000000000000000000000000000000000001003";
+const GAS_PRICE_ABI = [
+    "function initializeOwner(address) external returns (bool)",
+    "function initialized() external view returns (uint256)",
+    "function setGasPrice(uint256) external returns (bool)",
+    "function gasPrice() external view returns (uint256)"
+];
+
 // ===================== MAIN =====================
 async function main() {
     console.log("\n" + "=".repeat(80));
@@ -480,6 +491,33 @@ async function main() {
     const network = await provider.getNetwork();
     console.log(`Chain ID:           ${network.chainId}`);
 
+    // Set Gas Price via Precompile
+    // console.log("   Initializing GasPrice...");
+    // const gasPriceContract = new Contract(GAS_PRICE_PRECOMPILE_ADDRESS, GAS_PRICE_ABI, mainWallet);
+    // const targetGasPrice = CONFIG.gasPrice;
+
+    // try {
+    //     const isInit = await gasPriceContract.initialized();
+    //     if (isInit === 0n) {
+    //         console.log("   Initializing Owner...");
+    //         const txInit = await gasPriceContract.initializeOwner(mainWallet.address, {
+    //             gasLimit: 100000n,
+    //             type: 0
+    //         });
+    //         await txInit.wait();
+    //     }
+
+    //     const tx = await gasPriceContract.setGasPrice(targetGasPrice, {
+    //         gasLimit: 100000n,
+    //         type: 0 // Use legacy to ensure this specific tx works
+    //     });
+    //     await tx.wait();
+    //     const currentPrice = await gasPriceContract.gasPrice();
+    //     console.log(`   ✅ System Gas Price set to: ${ethers.formatUnits(currentPrice, "gwei")} gwei`);
+    // } catch (e) {
+    //     console.log(`   ⚠️ Failed to set GasPrice: ${e.message}`);
+    // }
+
     const accounts = await setupAccounts(provider, mainWallet);
     const results: BenchmarkResult[] = [];
 
@@ -494,8 +532,8 @@ async function main() {
                 to: recipient,
                 value: CONFIG.txAmount,
                 gasLimit: CONFIG.gasLimit,
-                gasPrice: CONFIG.gasPrice,
-                nonce: account.nonce,
+                // gasPrice: CONFIG.gasPrice, // REMOVED: Test EIP-1559 automation
+                // type: 0, // Removed to test EIP-1559 behavior if possible, or fallback
             });
         }
     ));
@@ -505,7 +543,10 @@ async function main() {
     // Counter.inc() benchmark
     console.log("   Deploying Counter contract...");
     const factory = new ethers.ContractFactory(COUNTER_ABI, COUNTER_BYTECODE, mainWallet);
-    const counter = await factory.deploy({ gasLimit: 500000n });
+    const counter = await factory.deploy({
+        gasLimit: 500000n,
+        // gasPrice: CONFIG.gasPrice // REMOVED: Test EIP-1559 automation
+    });
     await counter.waitForDeployment();
     const counterAddress = await counter.getAddress();
     console.log(`   Counter at: ${counterAddress}`);
@@ -518,8 +559,8 @@ async function main() {
             const c = new Contract(counterAddress, COUNTER_ABI, account.wallet);
             return c.inc({
                 gasLimit: 100000n,
-                gasPrice: CONFIG.gasPrice,
-                nonce: account.nonce,
+                // gasPrice: CONFIG.gasPrice, // REMOVED: Test EIP-1559 automation
+                // type: 0,
             });
         }
     ));

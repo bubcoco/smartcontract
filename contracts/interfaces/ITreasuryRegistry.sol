@@ -2,23 +2,45 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 /**
- * @title Interface Treasury Registry Precompiled Contract
- * @author Blockchain Department @ Advanced Info Services PCL
+ * @title Interface Treasury Registry Precompile Contract
+ * @author Kiwari Labs
  */
 
 interface ITreasuryRegistry {
     /**
-     * @notice Retrieves the current treasury address.
-     * @dev This function is expected to return the address of the current treasury.
-     * @return The address of the current treasury.
+     * @notice Sets the treasury address at a specific index.
+     * @param index The index position for the treasury address.
+     * @param treasury The treasury address to set.
+     * @return success True if the operation was successful, otherwise false.
      */
-    function treasuryAt() external view returns (address);
+    function setTreasury(
+        uint256 index,
+        address treasury
+    ) external returns (bool success);
 
     /**
-     * @notice Updates the treasury address.
-     * @dev This function sets a new address as the treasury. Returns `true` if the operation succeeds.
-     * @param newTreasury The new address to be set as the treasury.
-     * @return `true` if the treasury address is successfully updated, otherwise `false`.
+     * @notice Returns the treasury address at a specific index.
+     * @param index The index position to query.
+     * @return The treasury address at the specified index.
      */
-    function setTreasury(address newTreasury) external returns (bool);
+    function treasuryAt(uint256 index) external view returns (address);
+
+    /**
+     * @notice Returns the address of the current owner.
+     * @return The address of the owner.
+     */
+    function owner() external view returns (address);
+
+    /**
+     * @notice Returns the address of the current admin.
+     * @return The address of the admin.
+     */
+    function admin() external view returns (address);
+
+    /**
+     * @notice Transfers admin rights to a new address.
+     * @param newAdmin The address of the new admin.
+     * @return success True if the admin transfer was successful, otherwise false.
+     */
+    function transferAdmin(address newAdmin) external returns (bool success);
 }
