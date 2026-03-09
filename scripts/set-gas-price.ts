@@ -50,7 +50,7 @@ async function main() {
     console.log("║               Set GasPrice Precompile                              ║");
     console.log("╚════════════════════════════════════════════════════════════════════╝\n");
 
-    const adminKey = process.env.PRIV_KEY;
+    const adminKey = process.env.ADMIN;
     if (!adminKey) throw new Error("ADMIN private key not set in .env");
 
     const provider = new ethers.JsonRpcProvider("http://localhost:8545");

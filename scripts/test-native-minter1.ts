@@ -18,8 +18,8 @@ const NATIVE_MINTER_PRECOMPILE = "0x0000000000000000000000000000000000001001";
 
 // Test recipient - will receive minted tokens
 // const TEST_RECIPIENT = "0x54e7Ef5795d350Ae257Af47FEdF211bC8b0C5621";
-const TEST_RECIPIENT = "0xAe76b11CEcE311717934938510327203a373E826";
-const MINT_AMOUNT = ethers.parseEther("1000"); // 1000 ETH
+const TEST_RECIPIENT = "0xf17f52151EbEF6C7334FAD080c5704D77216b732";
+const MINT_AMOUNT = ethers.parseEther("10000"); // 1000 ETH
 
 async function main() {
     console.log("╔════════════════════════════════════════════════════════════════════╗");

@@ -21,7 +21,7 @@ dotenvConfig({ path: resolve(__dirname, "../.env") });
 // Configuration
 const RPC_URL = process.env.RPC_URL || "http://localhost:8545";
 const ADMIN_KEY = process.env.ADMIN || process.env.PRIV_KEY;
-const USER_KEY = process.env.PRIV_KEY;
+const USER_KEY = process.env.PRIV_KEY3;
 const FEE_GRANT_ADDRESS = "0x0000000000000000000000000000000000001006";
 
 // Precompile ABI (view functions only — no write)

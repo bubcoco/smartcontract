@@ -4,7 +4,7 @@
  * Verifies that fee grant changes in MainnetTransactionValidator &
  * MainnetTransactionProcessor have no side effects on core block processing.
  *
- * 9 Test Scenarios:
+ * Test Scenarios:
  *   1. Normal transfer (no grant) — sender pays gas
  *   2. Contract call (no grant) — sender pays gas
  *   3. Grant active → contract call — granter pays gas
@@ -15,6 +15,7 @@
  *   8. Multiple blocks sequential — block production stable
  *   9. Coinbase receives fees — fee distribution not broken
  *  15. Dual program grant — spend exceeds first, second unaffected
+ *  16. Wildcard grant multicall — transfer, contract call, deploy, mint, revoke
  *
  * Usage:
  *   npx tsx scripts/test-feegrant-impact.ts
@@ -51,6 +52,8 @@ const PRECOMPILE_ABI = [
     "function isGrantedForProgram(address grantee, address program) view returns (bool)",
     "function isExpired(address grantee, address program) view returns (bool)",
     "function grant(address grantee, address program) view returns (bytes32 granter, uint256 allowance, uint256 spendLimit, uint256 periodLimit, uint256 periodCanSpend, uint256 startTime, uint256 endTime, uint256 latestTransaction, uint256 period)",
+    "function wildcard(address grantee) returns (bool)",
+    "function isGrantedForAllProgram(address grantee) view returns (bool)",
 ];
 
 const COUNTER_ARTIFACT_PATH = path.resolve(__dirname, "../artifacts/contracts/Counter.sol/Counter.json");
@@ -583,10 +586,13 @@ async function test15_DualProgramGrantExceed(
 
     const precompile = new Contract(GAS_FEE_GRANT_ADDRESS, PRECOMPILE_ABI, admin);
 
-    // Grant A: small limit (0.5 ETH — enough for ~2 txs at 1000 gwei * 100k gas)
+    // Grant A: small limit (0.12 ETH — just above the upfront check of 0.1 ETH)
+    // The upfront check uses gasLimit × gasPrice = 100k × 1000 gwei = 0.1 ETH
+    // After 1 tx deducting ~0.044 ETH actual cost, remaining ~0.076 ETH < 0.1 → grant depleted
+    // Note: Counter.inc() uses ~26k gas × 1000 gwei = ~0.026 ETH actual cost per tx
     // Grant B: larger limit (10 ETH)
     const endTime = Math.floor(Date.now() / 1000) + 86400;
-    await grantFee(precompile, admin.address, wallet.address, addrA, "0.5", 86400, 86400);
+    await grantFee(precompile, admin.address, wallet.address, addrA, "0.12", 86400, 86400);
     await grantFee(precompile, admin.address, wallet.address, addrB, "10", 86400, 86400);
 
     const grantedA = await precompile.isGrantedForProgram(wallet.address, addrA);
@@ -619,8 +625,8 @@ async function test15_DualProgramGrantExceed(
     }
 
     // === Phase 2: Spam Counter A to deplete its grant ===
-    console.log(`   Spamming Counter A to deplete grant (0.5 ETH limit)...`);
-    for (let i = 0; i < 5; i++) {
+    console.log(`   Spamming Counter A to deplete grant (0.12 ETH limit)...`);
+    for (let i = 0; i < 10; i++) {
         try {
             const tx = await contractA.inc({ ...TX_OVERRIDES, gasLimit: 100000 });
             await tx.wait(1);
@@ -689,6 +695,155 @@ async function test15_DualProgramGrantExceed(
     try { await revokeFee(precompile, wallet.address, addrB); } catch { }
 }
 
+async function test16_WildcardGrantMulticall(
+    provider: ethers.JsonRpcProvider, admin: Wallet, factoryAddress: string
+) {
+    console.log("\n── Test 16: Wildcard Grant — Zero Balance Multicall ──");
+
+    if (!fs.existsSync(COUNTER_ARTIFACT_PATH)) {
+        fail("Counter artifact not found — compile first");
+        return;
+    }
+    const counterArtifact = JSON.parse(fs.readFileSync(COUNTER_ARTIFACT_PATH, "utf-8"));
+    const { ContractFactory: CF } = await import("ethers");
+
+    const precompile = new Contract(GAS_FEE_GRANT_ADDRESS, PRECOMPILE_ABI, admin);
+    const wallet = Wallet.createRandom().connect(provider);
+    const recipient = Wallet.createRandom().address;
+
+    // Verify wallet starts with 0 balance
+    const startBal = await provider.getBalance(wallet.address);
+    console.log(`   Wallet: ${wallet.address} (balance: ${ethers.formatEther(startBal)} ETH)`);
+
+    // Deploy a Counter for the wallet to call later
+    const counterFactory = new CF(counterArtifact.abi, counterArtifact.bytecode, admin);
+    const counter = await counterFactory.deploy(TX_OVERRIDES);
+    await counter.waitForDeployment();
+    const counterAddr = await counter.getAddress();
+    console.log(`   Counter: ${counterAddr}`);
+
+    // === Phase 1: Grant wildcard ===
+    const txWild = await precompile.wildcard(wallet.address, TX_OVERRIDES);
+    await txWild.wait(1);
+
+    const isGranted = await precompile.isGrantedForAllProgram(wallet.address);
+    if (isGranted) {
+        pass("Wildcard granted to zero-balance wallet");
+    } else {
+        fail("Wildcard grant failed");
+        return;
+    }
+
+    // === Phase 2: Multicall with wildcard (granter = admin) ===
+    const granterBal1 = await provider.getBalance(admin.address);
+
+    // 2a: Native transfer
+    try {
+        const tx = await wallet.sendTransaction({
+            to: recipient,
+            value: 0,
+            ...TRANSFER_OVERRIDES
+        });
+        await withTimeout(tx.wait(1), 30000, "wildcard transfer");
+        pass("Wildcard: native transfer (0 value) — granter paid");
+    } catch (e: any) {
+        fail("Wildcard: native transfer failed", e.message?.substring(0, 80));
+    }
+
+    // 2b: Contract call (Counter.inc)
+    try {
+        const counterWallet = new Contract(counterAddr, counterArtifact.abi, wallet);
+        const tx = await counterWallet.inc({ ...TX_OVERRIDES, gasLimit: 100000 });
+        await withTimeout(tx.wait(1), 30000, "wildcard counter.inc");
+        pass("Wildcard: contract call (Counter.inc) — granter paid");
+    } catch (e: any) {
+        fail("Wildcard: contract call failed", e.message?.substring(0, 80));
+    }
+
+    // 2c: Contract creation (deploy Counter from wallet)
+    try {
+        const walletFactory = new CF(counterArtifact.abi, counterArtifact.bytecode, wallet);
+        const newCounter = await walletFactory.deploy({ ...TX_OVERRIDES, gasLimit: 1000000 });
+        await newCounter.waitForDeployment();
+        const newAddr = await newCounter.getAddress();
+        pass("Wildcard: contract creation — granter paid", `Deployed at: ${newAddr}`);
+    } catch (e: any) {
+        fail("Wildcard: contract creation failed", e.message?.substring(0, 80));
+    }
+
+    // 2d: ERC20 mint via ContractFactory
+    try {
+        const factory = new Contract(factoryAddress, FACTORY_ABI, wallet);
+        const tx = await factory.createERC20("WildcardToken", "WCT", 18, 1000, wallet.address, CONTRACT_OVERRIDES);
+        await withTimeout(tx.wait(1), 30000, "wildcard erc20 mint");
+        pass("Wildcard: ERC20 mint via factory — granter paid");
+    } catch (e: any) {
+        fail("Wildcard: ERC20 mint failed", e.message?.substring(0, 80));
+    }
+
+    const granterBal2 = await provider.getBalance(admin.address);
+    const walletBal2 = await provider.getBalance(wallet.address);
+    console.log(`   📋 Granter spent: ${ethers.formatEther(granterBal1 - granterBal2)} ETH`);
+    console.log(`   📋 Wallet balance still: ${ethers.formatEther(walletBal2)} ETH`);
+
+    if (granterBal2 < granterBal1) {
+        pass("Granter paid for all wildcard operations");
+    } else {
+        fail("Granter should have paid for wildcard operations");
+    }
+
+    // === Phase 3: Revoke wildcard ===
+    const ZERO_PROGRAM = "0x0000000000000000000000000000000000000000";
+    const txRevoke = await precompile.revokeFeeGrant(wallet.address, ZERO_PROGRAM, TX_OVERRIDES);
+    await txRevoke.wait(1);
+
+    const isStillGranted = await precompile.isGrantedForAllProgram(wallet.address);
+    if (!isStillGranted) {
+        pass("Wildcard revoked successfully");
+    } else {
+        fail("Wildcard should have been revoked");
+    }
+
+    // === Phase 4: Retry multicall after revoke (should fail — 0 balance, no grant) ===
+    console.log(`   Retrying operations after revoke (expect failures)...`);
+    let postRevokePass = true;
+
+    // 4a: Native transfer — should fail (0 balance, no grant)
+    try {
+        const tx = await wallet.sendTransaction({
+            to: recipient,
+            value: 0,
+            ...TRANSFER_OVERRIDES
+        });
+        await withTimeout(tx.wait(1), 15000, "post-revoke transfer");
+        // If we get here, check who paid
+        const walletBal3 = await provider.getBalance(wallet.address);
+        if (walletBal3 < walletBal2) {
+            pass("Post-revoke: transfer succeeded but wallet paid (no grant)");
+        } else {
+            fail("Post-revoke: transfer succeeded but nobody paid gas");
+            postRevokePass = false;
+        }
+    } catch {
+        pass("Post-revoke: transfer correctly rejected (insufficient funds)");
+    }
+
+    // 4b: Contract call — should fail
+    try {
+        const counterWallet = new Contract(counterAddr, counterArtifact.abi, wallet);
+        const tx = await counterWallet.inc({ ...TX_OVERRIDES, gasLimit: 100000 });
+        await withTimeout(tx.wait(1), 15000, "post-revoke contract call");
+        fail("Post-revoke: contract call should have failed");
+        postRevokePass = false;
+    } catch {
+        pass("Post-revoke: contract call correctly rejected");
+    }
+
+    if (postRevokePass) {
+        pass("Post-revoke verification complete — wildcard fully revoked");
+    }
+}
+
 // ===================== MAIN =====================
 async function main() {
     console.log("╔════════════════════════════════════════════════════════════════════╗");
@@ -741,6 +896,9 @@ async function main() {
 
     // Dual Program Grant Test
     await test15_DualProgramGrantExceed(provider, admin);
+
+    // Wildcard Grant Test
+    await test16_WildcardGrantMulticall(provider, admin, factoryAddress);
 
     // Summary
     console.log("\n════════════════════════════════════════════════════════════════════");
