@@ -38,8 +38,9 @@ function parseArgs() {
 async function main() {
     const args = parseArgs();
 
-    if (!args.grantee || !args.amount) {
+    if ((!args.grantee || !args.amount) && !args.wildcard) {
         console.error("Usage: npx tsx scripts/grant-fee.ts --grantee <address> --amount <eth> [--program <address>] [--period <seconds>]");
+        console.error("   OR: npx tsx scripts/grant-fee.ts --wildcard <address>");
         process.exit(1);
     }
 
@@ -70,8 +71,34 @@ async function main() {
         "function revokeFeeGrant(address grantee, address program) returns (bool)",
         "function isGrantedForProgram(address grantee, address program) view returns (bool)",
         "function grant(address grantee, address program) view returns (bytes32 granter, uint256 allowance, uint256 spendLimit, uint256 periodLimit, uint256 periodCanSpend, uint256 startTime, uint256 endTime, uint256 latestTransaction, uint256 period)",
+        "function wildcard(address grantee) returns (bool)",
     ];
     const precompile = new ethers.Contract(GAS_FEE_GRANT_ADDRESS, abi, wallet);
+
+    if (args.wildcard) {
+        const wildcardGrantee = args.wildcard === true ? args.grantee : args.wildcard;
+        if (!wildcardGrantee) {
+            console.error("❌ Please provide a grantee address for the wildcard grant.");
+            process.exit(1);
+        }
+
+        console.log(`👤 Granter (Admin): ${wallet.address}`);
+        console.log(`🎁 Wildcard Grantee: ${wildcardGrantee}\n`);
+
+        try {
+            console.log(`⏳ Sending wildcard transaction...`);
+            const tx = await precompile.wildcard(wildcardGrantee);
+            console.log(`   Tx Hash: ${tx.hash}`);
+            const receipt = await tx.wait(1);
+            console.log(`   ✅ Wildcard grant created in block ${receipt.blockNumber}`);
+        } catch (e: any) {
+            console.error(`\n❌ Error creating wildcard grant: ${e.message}`);
+            if (e.data) {
+                console.error(`   Revert Data: ${e.data}`);
+            }
+        }
+        return;
+    }
 
     // 3. Check for existing grant — auto-revoke if found
     const existingGrant = await precompile.isGrantedForProgram(grantee, program);

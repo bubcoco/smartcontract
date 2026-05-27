@@ -25,6 +25,9 @@ const USER_KEY = process.env.PRIV_KEY;
 const FEE_GRANT_ADDRESS = "0x0000000000000000000000000000000000001006";
 
 const GRANT_ABI = [
+    "function initializeOwner(address) external returns (bool)",
+    "function initialized() view returns (uint256)",
+    "function owner() view returns (address)",
     "function setFeeGrant(address granter, address grantee, address program, uint256 spendLimit, uint32 period, uint256 periodLimit, uint256 endTime) returns (bool)",
     "function revokeFeeGrant(address grantee, address program) returns (bool)",
     "function isGrantedForProgram(address grantee, address program) view returns (bool)",
@@ -36,6 +39,21 @@ const COUNTER_ARTIFACT_PATH = resolve(__dirname, "../artifacts/contracts/Counter
 
 const gasPrice = parseUnits("2000", "gwei");
 const GAS_LIMIT = 100000;
+
+// ── Gas helper ──
+// Precompile admin calls need an explicit gasPrice that meets the GasPrice precompile
+// minimum (slot 3 of 0x1003). Without it, eth_estimateGas sends a zero-gasPrice simulation
+// which validateMinGasPrice rejects with TRANSACTION_PRICE_TOO_LOW.
+//
+// type:0 vs type:2: this chain's genesis has no baseFeePerGas, so baseFee=0 and both tx
+// types work. type:0 is used here because getFeeData() always returns a concrete gasPrice
+// for legacy chains, whereas type:2 depends on EIP-1559 fee estimation which may be
+// unreliable on QBFT chains without a live baseFee.
+async function getAdminOverrides(provider: ethers.JsonRpcProvider) {
+    const feeData = await provider.getFeeData();
+    const gp = feeData.gasPrice ?? parseUnits("1000", "gwei");
+    return { type: 0 as const, gasPrice: gp };
+}
 
 // ───────────────────────── HELPERS ─────────────────────────
 
@@ -50,6 +68,7 @@ interface GrantStats {
     label: string;
     program: string;
     sent: number;
+    reverted: number;
     errors: number;
     grantUsedCount: number;
     senderPaidCount: number;
@@ -81,31 +100,51 @@ async function setupGrant(
     label: string
 ): Promise<void> {
     // Revoke existing grant if any
+    const adminOverrides = await getAdminOverrides(admin.provider as ethers.JsonRpcProvider);
+
     const exists = await precompile.isGrantedForProgram(grantee, program);
     if (exists) {
         console.log(`   🗑️  Revoking old ${label} grant...`);
-        const rtx = await precompile.revokeFeeGrant(grantee, program);
+        const rtx = await precompile.revokeFeeGrant(grantee, program, adminOverrides);
         await rtx.wait(1);
     }
 
-    // Calculate block-based endTime
-    const blocksUntilExpiry = Math.ceil((expiryMinutes * 60) / blockTimeSec);
+    // Use a non-zero block-based expiry so this remains a normal limited-time grant.
+    // Under the current Besu precompile rules, normal grants may be unlimited in one
+    // dimension, but not both. This benchmark uses a limited-time, budgeted grant.
+    const blocksUntilExpiry = Math.max(1, Math.ceil((expiryMinutes * 60) / blockTimeSec));
     const endTimeBlock = currentBlock + blocksUntilExpiry;
 
     const spendLimit = ethers.parseEther(amountEth);
-    const period = 3600 * 24 * 365; // 1 year period
-    const periodLimit = spendLimit;
+    // Use a basic allowance grant. In the current Besu precompile, any non-zero
+    // `period` with non-zero `periodLimit` is treated as a periodic allowance and
+    // validated with stricter invariants. This benchmark models total-budget
+    // depletion plus expiry, so a basic allowance is the correct fit.
+    const period = 0;
+    const periodLimit = 0;
 
-    // Pre-check with staticCall
+    const [initialized, owner, stillGranted] = await Promise.all([
+        precompile.initialized().catch(() => 0n),
+        precompile.owner().catch(() => ethers.ZeroAddress),
+        precompile.isGrantedForProgram(grantee, program).catch(() => false),
+    ]);
+
+    console.log(
+        `   🔎 ${label} preflight: initialized=${initialized.toString()} owner=${owner} exists=${stillGranted} spendLimit=${amountEth}ETH endTimeBlock=${endTimeBlock}`
+    );
+
+    // Pre-check with staticCall — pass live gasPrice so GasPrice precompile accepts the simulation
     const willSucceed = await precompile.setFeeGrant.staticCall(
-        admin.address, grantee, program, spendLimit, period, periodLimit, endTimeBlock
+        admin.address, grantee, program, spendLimit, period, periodLimit, endTimeBlock,
+        adminOverrides
     );
     if (!willSucceed) {
-        throw new Error(`setFeeGrant would return FALSE for ${label}`);
+        throw new Error(`setFeeGrant would return FALSE for ${label} (spendLimit=${amountEth} ETH, endTimeBlock=${endTimeBlock}, blocksUntilExpiry=${blocksUntilExpiry})`);
     }
 
     const tx = await precompile.setFeeGrant(
-        admin.address, grantee, program, spendLimit, period, periodLimit, endTimeBlock
+        admin.address, grantee, program, spendLimit, period, periodLimit, endTimeBlock,
+        adminOverrides
     );
     const receipt = await tx.wait(1);
 
@@ -130,6 +169,52 @@ async function getGrantStatus(precompile: ethers.Contract, grantee: string, prog
 
 // ───────────────────────── MAIN ─────────────────────────
 
+
+async function waitForReceiptAllowRevert(provider: ethers.Provider, txResponse: ethers.TransactionResponse) {
+    const receipt = await txResponse.wait(1);
+    if (!receipt) {
+        throw new Error(`Transaction ${txResponse.hash} was not mined`);
+    }
+    return receipt;
+}
+
+function formatGrantReadback(grantData: any): string[] {
+    const lines: string[] = [];
+    const allowance = BigInt(grantData.allowance ?? 0n);
+    const spendLimit = BigInt(grantData.spendLimit ?? 0n);
+    const periodLimit = BigInt(grantData.periodLimit ?? 0n);
+    const periodCanSpend = BigInt(grantData.periodCanSpend ?? 0n);
+    const period = BigInt(grantData.period ?? 0n);
+
+    lines.push(`Configured spendLimit field: ${ethers.formatEther(spendLimit)} ETH`);
+
+    if (allowance === 2n || period > 0n || periodLimit > 0n) {
+        lines.push(`Periodic field snapshot: periodLimit=${ethers.formatEther(periodLimit)} ETH, periodCanSpend=${ethers.formatEther(periodCanSpend)} ETH`);
+    } else {
+        lines.push(`Periodic field snapshot: N/A (basic allowance; period=0, periodLimit=0)`);
+    }
+
+    return lines;
+}
+
+function formatPayerShift(userDiff: bigint, granterDiff: bigint): string[] {
+    const lines: string[] = [];
+    if (userDiff > 0n && granterDiff > 0n) {
+        lines.push("Observed payer mix: both sender and granter spent ETH during the run.");
+        if (userDiff < granterDiff) {
+            lines.push("Interpretation: early txs were grant-funded, then fallback to sender dominated after the grant became unusable for tx upfront cost.");
+        } else {
+            lines.push("Interpretation: sender-paid fallback dominated a significant portion of the run.");
+        }
+    } else if (granterDiff > 0n) {
+        lines.push("Observed payer mix: granter-funded only.");
+    } else if (userDiff > 0n) {
+        lines.push("Observed payer mix: sender-funded only (grant path did not materially cover execution during the measured window).");
+    } else {
+        lines.push("Observed payer mix: no ETH balance movement detected.");
+    }
+    return lines;
+}
 async function main() {
     console.log("╔════════════════════════════════════════════════════════════════════╗");
     console.log("║   Benchmark 11: Dual Program Grant — Depletion & Expiry Test      ║");
@@ -154,7 +239,7 @@ async function main() {
 
     // 2. Estimate block time
     const block1 = await provider.getBlock("latest");
-    const block0 = await provider.getBlock(block1!.number - 10);
+    const block0 = await provider.getBlock(Math.max(0, block1!.number - 10));
     const blockTimeSec = block0 && block1
         ? Math.max(1, Math.round((block1.timestamp - block0.timestamp) / 10))
         : 1;
@@ -165,11 +250,20 @@ async function main() {
     console.log("\n── Step 2: Create Program-Specific Grants ──");
     const precompile = new ethers.Contract(FEE_GRANT_ADDRESS, GRANT_ABI, admin);
 
+    const mainAdminOverrides = await getAdminOverrides(provider);
+
+    const precompileInitialized = await precompile.initialized().catch(() => 0n);
+    if (BigInt(precompileInitialized) === 0n) {
+        console.log("   Initializing precompile owner...");
+        const tx = await precompile.initializeOwner(admin.address, mainAdminOverrides);
+        await tx.wait(1);
+    }
+
     // Also revoke any wildcard grant to avoid interference
     const wildcardExists = await precompile.isGrantedForProgram(user.address, ethers.ZeroAddress);
     if (wildcardExists) {
         console.log("   🗑️  Revoking existing wildcard grant...");
-        const rtx = await precompile.revokeFeeGrant(user.address, ethers.ZeroAddress);
+        const rtx = await precompile.revokeFeeGrant(user.address, ethers.ZeroAddress, mainAdminOverrides);
         await rtx.wait(1);
         console.log("   ✅ Wildcard grant revoked");
     }
@@ -198,12 +292,12 @@ async function main() {
 
     const statsA: GrantStats = {
         label: "A", program: counterA,
-        sent: 0, errors: 0, grantUsedCount: 0, senderPaidCount: 0,
+        sent: 0, reverted: 0, errors: 0, grantUsedCount: 0, senderPaidCount: 0,
         depleted: false, depletedAt: "", expired: false, expiredAt: "",
     };
     const statsB: GrantStats = {
         label: "B", program: counterB,
-        sent: 0, errors: 0, grantUsedCount: 0, senderPaidCount: 0,
+        sent: 0, reverted: 0, errors: 0, grantUsedCount: 0, senderPaidCount: 0,
         depleted: false, depletedAt: "", expired: false, expiredAt: "",
     };
 
@@ -220,12 +314,18 @@ async function main() {
         const stats = isA ? statsA : statsB;
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
 
-        process.stdout.write(`\r[${elapsed}s] A:${statsA.sent}✅${statsA.errors}❌ | B:${statsB.sent}✅${statsB.errors}❌ | nonce:${nonce}  `);
+        process.stdout.write(`\r[${elapsed}s] A:${statsA.sent}✅${statsA.reverted}↩${statsA.errors}❌ | B:${statsB.sent}✅${statsB.reverted}↩${statsB.errors}❌ | nonce:${nonce}  `);
 
         try {
-            await contract.inc({ nonce, gasLimit: GAS_LIMIT, gasPrice });
-            stats.sent++;
+            const tx = await contract.inc({ nonce, gasLimit: GAS_LIMIT, gasPrice });
             nonce++;
+            const receipt = await waitForReceiptAllowRevert(provider, tx);
+
+            if (receipt.status === 0) {
+                stats.reverted++;
+            } else {
+                stats.sent++;
+            }
         } catch (e: any) {
             const msg = e.message || "";
             if (msg.includes("nonce") || msg.includes("replacement")) {
@@ -249,7 +349,7 @@ async function main() {
                 if (!s.depleted && gs.remaining < BigInt(GAS_LIMIT) * gasPrice) {
                     s.depleted = true;
                     s.depletedAt = `${elapsedStr}s (block ${curBlock})`;
-                    console.log(`\n   ⚡ Grant ${s.label} DEPLETED at ${s.depletedAt} — remaining: ${ethers.formatEther(gs.remaining)} ETH`);
+                    console.log(`\n   ⚡ Grant ${s.label} OPERATIONALLY DEPLETED at ${s.depletedAt} — next tx upfront cost exceeds current usable grant path (${ethers.formatEther(gs.remaining)} ETH snapshot)`);
                 }
 
                 if (!s.expired && gs.expired) {
@@ -299,34 +399,42 @@ async function main() {
 
     console.log(`\n⏱  Duration: ${elapsedTotal}s`);
     console.log(`📊 Total Sent: ${statsA.sent + statsB.sent} (A:${statsA.sent} + B:${statsB.sent})`);
+    console.log(`↩️  Total Reverted But Mined: ${statsA.reverted + statsB.reverted} (A:${statsA.reverted} + B:${statsB.reverted})`);
     console.log(`❌ Total Errors: ${statsA.errors + statsB.errors} (A:${statsA.errors} + B:${statsB.errors})`);
-    console.log(`📊 Rate: ${((statsA.sent + statsB.sent) / parseFloat(elapsedTotal)).toFixed(1)} tx/s`);
+    console.log(`📊 Chain Inclusion Rate: ${((statsA.sent + statsB.sent + statsA.reverted + statsB.reverted) / parseFloat(elapsedTotal)).toFixed(1)} tx/s`);
 
     console.log(`\n── Grant A (10 ETH, 5min expiry) — ${counterA} ──`);
-    console.log(`   Sent: ${statsA.sent} | Errors: ${statsA.errors}`);
-    console.log(`   Depleted: ${statsA.depleted ? `YES at ${statsA.depletedAt}` : "NO"}`);
+    console.log(`   Succeeded: ${statsA.sent} | Reverted but mined: ${statsA.reverted} | Errors: ${statsA.errors}`);
+    console.log(`   Operationally depleted for current tx pricing: ${statsA.depleted ? `YES at ${statsA.depletedAt}` : "NO"}`);
     console.log(`   Expired:  ${statsA.expired ? `YES at ${statsA.expiredAt}` : "NO"}`);
     if (grantADetails) {
-        console.log(`   Remaining: spendLimit=${ethers.formatEther(grantADetails.spendLimit)} ETH, periodCanSpend=${ethers.formatEther(grantADetails.periodCanSpend)} ETH`);
+        for (const line of formatGrantReadback(grantADetails)) {
+            console.log(`   ${line}`);
+        }
     }
 
     console.log(`\n── Grant B (30 ETH, 7min expiry) — ${counterB} ──`);
-    console.log(`   Sent: ${statsB.sent} | Errors: ${statsB.errors}`);
-    console.log(`   Depleted: ${statsB.depleted ? `YES at ${statsB.depletedAt}` : "NO"}`);
+    console.log(`   Succeeded: ${statsB.sent} | Reverted but mined: ${statsB.reverted} | Errors: ${statsB.errors}`);
+    console.log(`   Operationally depleted for current tx pricing: ${statsB.depleted ? `YES at ${statsB.depletedAt}` : "NO"}`);
     console.log(`   Expired:  ${statsB.expired ? `YES at ${statsB.expiredAt}` : "NO"}`);
     if (grantBDetails) {
-        console.log(`   Remaining: spendLimit=${ethers.formatEther(grantBDetails.spendLimit)} ETH, periodCanSpend=${ethers.formatEther(grantBDetails.periodCanSpend)} ETH`);
+        for (const line of formatGrantReadback(grantBDetails)) {
+            console.log(`   ${line}`);
+        }
     }
 
     console.log(`\n── Balance Changes ──`);
     console.log(`   User:    ${ethers.formatEther(userBalBefore)} → ${ethers.formatEther(userBalAfter)} (${userDiff >= 0n ? "-" : "+"}${ethers.formatEther(userDiff >= 0n ? userDiff : -userDiff)} ETH)`);
     console.log(`   Granter: ${ethers.formatEther(granterBalBefore)} → ${ethers.formatEther(granterBalAfter)} (${granterDiff >= 0n ? "-" : "+"}${ethers.formatEther(granterDiff >= 0n ? granterDiff : -granterDiff)} ETH)`);
+    for (const line of formatPayerShift(userDiff, granterDiff)) {
+        console.log(`   ${line}`);
+    }
 
     console.log(`\n── Timeline ──`);
     const events: { time: string; event: string }[] = [];
-    if (statsA.depleted) events.push({ time: statsA.depletedAt, event: "Grant A depleted (10 ETH used)" });
+    if (statsA.depleted) events.push({ time: statsA.depletedAt, event: "Grant A became unusable for current tx pricing (fallback threshold reached)" });
     if (statsA.expired) events.push({ time: statsA.expiredAt, event: "Grant A expired (5min)" });
-    if (statsB.depleted) events.push({ time: statsB.depletedAt, event: "Grant B depleted (30 ETH used)" });
+    if (statsB.depleted) events.push({ time: statsB.depletedAt, event: "Grant B became unusable for current tx pricing (fallback threshold reached)" });
     if (statsB.expired) events.push({ time: statsB.expiredAt, event: "Grant B expired (7min)" });
     events.sort((a, b) => parseFloat(a.time) - parseFloat(b.time));
 

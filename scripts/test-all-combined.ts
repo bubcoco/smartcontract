@@ -1,40 +1,13 @@
 /**
- * Fee Grant Core Impact Test
+ * Combined Precompile Test Suite
  *
- * Verifies that fee grant changes in MainnetTransactionValidator &
- * MainnetTransactionProcessor have no side effects on core block processing.
- *
- * Test Scenarios:
- *   1.  Normal transfer (no grant) — sender pays gas
- *   2.  Contract call (no grant) — sender pays gas
- *   3.  Grant active → contract call — granter pays gas
- *   4.  Revoke grant → retry tx — sender pays gas after revoke
- *   5.  Expired grant → grant disabled, fallback to sender pays gas
- *   6.  Grant exceeds spend limit → grant disabled, fallback to sender pays gas
- *   7.  Granter insufficient balance → grant disabled, fallback to sender pays gas
- *   8.  Multiple blocks sequential — block production stable
- *   9.  Coinbase receives fees — fee distribution not broken
- *  10.  Access control: fresh address cannot re-initialize owner
- *  11.  Access control: fresh address cannot setFeeGrant
- *  12.  Access control: fresh address cannot revokeFeeGrant
- *  13.  Access control: fresh address cannot transferOwnership
- *  14.  Access control: fresh address cannot steal ownership
- *  15.  Dual program grant — spend exceeds first, second unaffected
- *  16.  Wildcard grant multicall — transfer, contract call, deploy, mint, revoke
- *  17.  Wildcard lazy cleanup — poor granter clears grantee state on use
- *  18.  Wildcard cleanup persists — follow-up tx still pays from sender
- *  19.  Wildcard lazy cleanup is per-grantee — healthy grantee unaffected
- *  20.  Fresh zero-balance sender uses grant across tx types
- *  21.  Unlimited spend limit (spendLimit=0) — granter pays indefinitely
- *  22.  transferOwnership → new owner can create fee grants
- *  23.  grant() view function returns correct field values
- *  24.  Period limit enforcement — second tx in same period falls back to sender
- *  25.  Multiple grantees same granter — revoke one, other unaffected
- *  26.  Scoped grant for native ETH transfer — gas sponsored
- *  27.  Re-grant after revoke — new grant works correctly
+ * Merges three test scripts into a single executable:
+ *   SUITE A — Fee Grant Core Impact Tests (27 tests)
+ *   SUITE B — Comprehensive Precompile Read Tests (6 precompiles)
+ *   SUITE C — GasPrice Enforcement + Revenue Distribution (3 parts)
  *
  * Usage:
- *   npx tsx scripts/test-feegrant-impact.ts
+ *   npx tsx scripts/test-all-combined.ts
  */
 
 import { ethers, Wallet, Contract } from "ethers";
@@ -217,8 +190,264 @@ async function revokeFee(precompile: Contract, grantee: string, program: string)
     await waitForReceipt(tx, `revokeFee:${program}`);
 }
 
-// ===================== TESTS =====================
+// ===================== PRECOMPILE READ-TEST CONFIG (Suite B) =====================
+const PRECOMPILES = {
+    NATIVE_MINTER: "0x0000000000000000000000000000000000001001",
+    ADDRESS_REGISTRY: "0x0000000000000000000000000000000000001002",
+    GAS_PRICE: "0x0000000000000000000000000000000000001003",
+    REVENUE_RATIO: "0x0000000000000000000000000000000000001004",
+    TREASURY_REGISTRY: "0x0000000000000000000000000000000000001005",
+    GAS_FEE_GRANT: "0x0000000000000000000000000000000000001006",
+};
 
+// ABIs for each precompile
+const ABIS = {
+    NATIVE_MINTER: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function totalsupply() view returns (uint256)",
+        "function mint(address to, uint256 value) returns (bool, string)",
+    ],
+    ADDRESS_REGISTRY: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function contains(address account) view returns (bool)",
+        "function addToRegistry(address account) returns (bool)",
+        "function removeFromRegistry(address account) returns (bool)",
+    ],
+    GAS_PRICE: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function gasPrice() view returns (uint256)",
+        "function status() view returns (bool)",
+        "function enable() returns (bool)",
+        "function disable() returns (bool)",
+        "function setGasPrice(uint256 price) returns (bool)",
+    ],
+    REVENUE_RATIO: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function status() view returns (bool)",
+        "function senderRatio() view returns (uint256)",
+        "function coinbaseRatio() view returns (uint256)",
+        "function providerRatio() view returns (uint256)",
+        "function treasuryRatio() view returns (uint256)",
+        "function enable() returns (bool)",
+        "function disable() returns (bool)",
+        "function setRevenueRatio(uint8 contractRatio, uint8 coinbaseRatio, uint8 providerRatio, uint8 treasuryRatio) returns (bool)",
+    ],
+    TREASURY_REGISTRY: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function treasuryAt() view returns (address)",
+        "function setTreasury(address treasury) returns (bool)",
+    ],
+    GAS_FEE_GRANT: [
+        "function owner() view returns (address)",
+        "function initialized() view returns (bool)",
+        "function initializeOwner(address owner) returns (bool)",
+        "function isGrantedForProgram(address grantee, address program) view returns (bool)",
+        "function grant(address grantee, address program) view returns (address granter, uint256 allowance, uint256 spendLimit, uint256 periodLimit, uint256 periodCanSpend, uint256 startTime, uint256 endTime, uint256 latestTransaction, uint256 period)",
+        "function setFeeGrant(address granter, address grantee, address program, uint256 spendLimit, uint32 period, uint256 periodLimit, uint256 endTime) returns (bool)",
+        "function revokeFeeGrant(address grantee, address program) returns (bool)",
+        "function periodCanSpend(address grantee, address program) view returns (uint256)",
+    ],
+};
+
+interface TestResult {
+    name: string;
+    passed: boolean;
+    message: string;
+    details?: any;
+}
+
+async function testPrecompile(
+    name: string,
+    testFn: () => Promise<TestResult[]>
+): Promise<{ name: string; results: TestResult[] }> {
+    console.log(`\n${"═".repeat(70)}`);
+    console.log(`  Testing: ${name}`);
+    console.log(`${"═".repeat(70)}`);
+
+    try {
+        const results = await testFn();
+        return { name, results };
+    } catch (e: any) {
+        return {
+            name,
+            results: [{ name: "Connection", passed: false, message: e.shortMessage || e.message }],
+        };
+    }
+}
+
+// ===================== GASPRICE + REVENUE CONFIG (Suite C) =====================
+// ── Precompile addresses ────────────────────────────────────────────────────
+const GAS_PRICE_ADDR      = "0x0000000000000000000000000000000000001003";
+const REVENUE_RATIO_ADDR  = "0x0000000000000000000000000000000000001004";
+const TREASURY_REG_ADDR   = "0x0000000000000000000000000000000000001005";
+
+// ── ABIs ────────────────────────────────────────────────────────────────────
+const GAS_PRICE_ABI = [
+    "function owner() view returns (address)",
+    "function initialized() view returns (bool)",
+    "function initializeOwner(address) returns (bool)",
+    "function status() view returns (bool)",
+    "function gasPrice() view returns (uint256)",
+    "function enable() returns (bool)",
+    "function disable() returns (bool)",
+    "function setGasPrice(uint256 price) returns (bool)",
+];
+
+const REVENUE_RATIO_ABI = [
+    "function owner() view returns (address)",
+    "function initialized() view returns (bool)",
+    "function initializeOwner(address) returns (bool)",
+    "function status() view returns (bool)",
+    "function senderRatio() view returns (uint256)",
+    "function coinbaseRatio() view returns (uint256)",
+    "function providerRatio() view returns (uint256)",
+    "function treasuryRatio() view returns (uint256)",
+    "function enable() returns (bool)",
+    "function disable() returns (bool)",
+    "function setRevenueRatio(uint8 senderRatio, uint8 coinbaseRatio, uint8 providerRatio, uint8 treasuryRatio) returns (bool)",
+];
+
+const TREASURY_REG_ABI = [
+    "function owner() view returns (address)",
+    "function initialized() view returns (bool)",
+    "function initializeOwner(address) returns (bool)",
+    "function treasuryAt() view returns (address)",
+    "function setTreasury(address) returns (bool)",
+    "function providerAt() view returns (address)",
+    "function setProvider(address) returns (bool)",
+];
+
+// ── Suite C assertion helper (uses unified passCount/failCount) ─────────────
+const failures: string[] = [];
+
+function assertCondition(condition: boolean, label: string) {
+    if (condition) {
+        console.log(`      ✅ PASS: ${label}`);
+        passCount++;
+    } else {
+        console.log(`      ❌ FAIL: ${label}`);
+        failCount++;
+        failures.push(label);
+    }
+}
+
+function section(title: string) {
+    console.log(`\n${"─".repeat(70)}`);
+    console.log(`  ${title}`);
+    console.log(`${"─".repeat(70)}`);
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Ensure a precompile is initialized and owned by `owner`. Returns false if we are not the owner. */
+async function ensureInit(contract: ethers.Contract, ownerAddr: string, txOpts: object): Promise<boolean> {
+    const isInit: boolean = await contract.initialized();
+    if (!isInit) {
+        const tx = await contract.initializeOwner(ownerAddr, txOpts);
+        await tx.wait(1);
+    }
+    const storedOwner: string = await contract.owner();
+    return storedOwner.toLowerCase() === ownerAddr.toLowerCase();
+}
+
+/** Send a bare ETH transfer using raw gasPrice (legacy tx type 0) and return the receipt. */
+async function sendLegacyTx(
+    provider: ethers.JsonRpcProvider,
+    wallet: ethers.Wallet,
+    to: string,
+    gasPriceWei: bigint,
+    gasLimit = 21_000n,
+): Promise<ethers.TransactionReceipt | null> {
+    const nonce = await provider.getTransactionCount(wallet.address, "pending");
+    const network = await provider.getNetwork();
+    const tx = await wallet.sendTransaction({
+        to,
+        value: 0n,
+        gasLimit,
+        gasPrice: gasPriceWei,
+        nonce,
+        type: 0,
+        chainId: network.chainId,
+    });
+    return tx.wait(1);
+}
+
+/** Attempt a tx that is expected to be excluded from block production (floor enforcement).
+ *
+ *  Two-phase check:
+ *   Phase 1 — if sendTransaction throws immediately → mempool-level rejection → PASS (ideal)
+ *   Phase 2 — if tx hash returned, poll until `minExclusionBlocks` are produced and receipt
+ *              is still null → block-level enforcement confirmed → PASS (current behaviour)
+ *
+ *  IMPORTANT: use a dedicated wallet that is NOT shared with other tests. Stuck txs leave
+ *  a pending nonce that would block subsequent txs from the same wallet.
+ */
+async function expectNotMined(
+    provider: ethers.JsonRpcProvider,
+    wallet: ethers.Wallet,
+    to: string,
+    gasPriceWei: bigint,
+    label: string,
+    minExclusionBlocks = 3,
+    timeoutMs = 60_000,
+): Promise<void> {
+    let txHash: string | undefined;
+
+    try {
+        const nonce = await provider.getTransactionCount(wallet.address, "pending");
+        const network = await provider.getNetwork();
+        const response = await wallet.sendTransaction({
+            to, value: 0n, gasLimit: 21_000n,
+            gasPrice: gasPriceWei, nonce, type: 0,
+            chainId: network.chainId,
+        });
+        txHash = response.hash;
+    } catch (e: any) {
+        // Mempool-level rejection — ideal early enforcement
+        const msg: string = (e?.message ?? "") + (e?.info?.error?.message ?? "");
+        const isGasPriceError = msg.toLowerCase().includes("too low")
+            || msg.toLowerCase().includes("price")
+            || msg.toLowerCase().includes("underpriced")
+            || msg.toLowerCase().includes("below");
+        assertCondition(isGasPriceError,
+            `${label} — rejected at mempool (got: "${msg.slice(0, 120)}")`);
+        return;
+    }
+
+    // Tx entered mempool — confirm it stays unincluded for `minExclusionBlocks`
+    const startBlock = await provider.getBlockNumber();
+    const deadline   = Date.now() + timeoutMs;
+    let blocksObserved = 0;
+
+    while (Date.now() < deadline) {
+        const receipt = await provider.getTransactionReceipt(txHash);
+        if (receipt !== null) {
+            assertCondition(false, `${label} — tx was included in block ${receipt.blockNumber} despite underpricing`);
+            return;
+        }
+        const currentBlock = await provider.getBlockNumber();
+        blocksObserved = currentBlock - startBlock;
+        if (blocksObserved >= minExclusionBlocks) {
+            assertCondition(true,
+                `${label} — excluded from ${blocksObserved} consecutive blocks (floor enforced at block-build time)`);
+            return;
+        }
+        await new Promise(r => setTimeout(r, 2_000));
+    }
+    assertCondition(false, `${label} — timed out waiting for ${minExclusionBlocks} blocks to confirm exclusion (only saw ${blocksObserved})`);
+}
+
+// ===================== SUITE A: FEE GRANT TESTS =====================
 async function test1_NormalTransferNoGrant(provider: ethers.JsonRpcProvider, admin: Wallet) {
     console.log("\n── Test 1: Normal Transfer (No Grant) ──");
     const wallet = Wallet.createRandom().connect(provider);
@@ -1948,11 +2177,11 @@ async function test27_ReGrantAfterRevoke(
     try { await revokeFee(precompile, grantee.address, factoryAddress); } catch { }
 }
 
-// ===================== MAIN =====================
+// ===================== UNIFIED MAIN =====================
 async function main() {
-    console.log("╔════════════════════════════════════════════════════════════════════╗");
-    console.log("║            Fee Grant Core Impact Test                             ║");
-    console.log("╚════════════════════════════════════════════════════════════════════╝\n");
+    console.log("╔══════════════════════════════════════════════════════════════════════╗");
+    console.log("║            Combined Precompile Test Suite                            ║");
+    console.log("╚══════════════════════════════════════════════════════════════════════╝\n");
 
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const adminKey = process.env.ADMIN || process.env.PRIV_KEY;
@@ -1967,9 +2196,9 @@ async function main() {
 
     console.log(`🔑 Admin: ${admin.address}`);
     console.log(`🏭 Factory: ${factoryAddress}`);
-    console.log(`📄 Precompile: ${GAS_FEE_GRANT_ADDRESS}`);
+    console.log(`📄 GasFeeGrant Precompile: ${GAS_FEE_GRANT_ADDRESS}`);
 
-    // Ensure precompile owner is initialized
+    // Ensure GasFeeGrant precompile owner is initialized
     const precompile = new Contract(GAS_FEE_GRANT_ADDRESS, PRECOMPILE_ABI, admin);
     try {
         const isInitRaw = await precompile.initialized();
@@ -2002,11 +2231,15 @@ async function main() {
         throw new Error(`Precompile ownership check failed: ${error.shortMessage || error.message}`);
     }
 
-    // Flush any pending admin txs left over from a previous interrupted run so that
-    // nonce gaps don't cause TRANSACTION_REPLACED errors in subsequent tests.
     await flushPendingTxs(admin, provider);
 
-    // Run all tests
+    // ═══════════════════════════════════════════════════════════════════
+    // SUITE A — Fee Grant Core Impact Tests
+    // ═══════════════════════════════════════════════════════════════════
+    console.log("\n" + "═".repeat(70));
+    console.log("  SUITE A — Fee Grant Core Impact Tests");
+    console.log("═".repeat(70));
+
     await test1_NormalTransferNoGrant(provider, admin);
     await test2_ContractCallNoGrant(provider, admin, factoryAddress);
     await test3_GrantActiveContractCall(provider, admin, factoryAddress);
@@ -2017,26 +2250,18 @@ async function main() {
     await test8_MultipleBlocksStability(provider, admin);
     await test9_CoinbaseReceivesFees(provider, admin);
 
-    // Access Control Tests
     await test10_FreshAddressCannotInitialize(provider, admin);
     await test11_FreshAddressCannotSetFeeGrant(provider, admin, factoryAddress);
     await test12_FreshAddressCannotRevokeFeeGrant(provider, admin, factoryAddress);
     await test13_FreshAddressCannotTransferOwnership(provider, admin);
     await test14_FreshAddressCannotStealOwnership(provider, admin);
 
-    // Dual Program Grant Test
     await test15_DualProgramGrantExceed(provider, admin);
-
-    // Wildcard Grant Test
     await test16_WildcardGrantMulticall(provider, admin, factoryAddress);
-
-    // Consensus-sensitive wildcard state behavior
     await test17_WildcardLazyCleanupPoorGranter(provider, admin);
     await test18_WildcardCleanupPersists(provider, admin);
     await test19_WildcardLazyCleanupPerGrantee(provider, admin);
     await test20_FreshGrantZeroBalanceCoverage(provider, admin, factoryAddress);
-
-    // Extended grant coverage
     await test21_UnlimitedSpendLimit(provider, admin, factoryAddress);
     await test22_TransferOwnershipNewOwnerCanGrant(provider, admin, factoryAddress);
     await test23_GrantViewFieldVerification(provider, admin, factoryAddress);
@@ -2045,17 +2270,618 @@ async function main() {
     await test26_ScopedGrantNativeTransfer(provider, admin);
     await test27_ReGrantAfterRevoke(provider, admin, factoryAddress);
 
-    // Summary
-    console.log("\n════════════════════════════════════════════════════════════════════");
-    console.log(`📊 Results: ${passCount} PASSED, ${failCount} FAILED`);
-    console.log("════════════════════════════════════════════════════════════════════\n");
+    console.log("\n" + "═".repeat(70));
+    console.log(`  SUITE A Results: ${passCount} PASSED, ${failCount} FAILED`);
+    console.log("═".repeat(70));
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SUITE B — Comprehensive Precompile Read Tests
+    // ═══════════════════════════════════════════════════════════════════
+    console.log("\n" + "═".repeat(70));
+    console.log("  SUITE B — Comprehensive Precompile Read Tests");
+    console.log("═".repeat(70));
+
+    await runSuiteB(provider, admin);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SUITE C — GasPrice Enforcement + Revenue Distribution
+    // ═══════════════════════════════════════════════════════════════════
+    console.log("\n" + "═".repeat(70));
+    console.log("  SUITE C — GasPrice Enforcement + Revenue Distribution");
+    console.log("═".repeat(70));
+
+    await runSuiteC(provider, admin);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // FINAL SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    console.log("\n" + "═".repeat(70));
+    console.log(`  FINAL: ${passCount} PASSED, ${failCount} FAILED`);
+    console.log("═".repeat(70) + "\n");
 
     if (failCount > 0) {
         console.log("⚠️  Some tests failed. Review output above.\n");
         process.exit(1);
     } else {
-        console.log("✅ All tests passed! No side effects detected.\n");
+        console.log("✅ All tests passed!\n");
     }
+}
+
+// ===================== SUITE B: PRECOMPILE READ TESTS =====================
+async function runSuiteB(provider: ethers.JsonRpcProvider, wallet: Wallet) {
+    const txOptions = { gasLimit: 500000n, gasPrice: 100000000000n };
+    const allResults: { name: string; results: TestResult[] }[] = [];
+
+    allResults.push(
+        await testPrecompile("NativeMinter (0x1001)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.NATIVE_MINTER, ABIS.NATIVE_MINTER, wallet);
+
+            // Test initialized
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}`, details: initialized });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            // Test owner
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner, details: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            // Test totalsupply() using the Java precompile selector name
+            try {
+                const supply = await contract.totalsupply();
+                results.push({ name: "totalsupply()", passed: true, message: `${ethers.formatEther(supply)} ETH`, details: supply });
+            } catch (e: any) {
+                results.push({ name: "totalsupply()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            return results;
+        })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 2. Test Address Registry Precompile
+    // ═══════════════════════════════════════════════════════════════════
+    allResults.push(
+        await testPrecompile("AddressRegistry (0x1002)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.ADDRESS_REGISTRY, ABIS.ADDRESS_REGISTRY, wallet);
+
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}` });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            // Test contains
+            try {
+                const contains = await contract.contains(wallet.address);
+                results.push({ name: "contains(wallet)", passed: true, message: `${contains}` });
+            } catch (e: any) {
+                results.push({ name: "contains(wallet)", passed: false, message: e.shortMessage || e.message });
+            }
+
+            return results;
+        })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 3. Test Gas Price Precompile
+    // ═══════════════════════════════════════════════════════════════════
+    allResults.push(
+        await testPrecompile("GasPrice (0x1003)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.GAS_PRICE, ABIS.GAS_PRICE, wallet);
+
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}` });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const status = await contract.status();
+                results.push({ name: "status()", passed: true, message: `${status}` });
+            } catch (e: any) {
+                results.push({ name: "status()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const gasPrice = await contract.gasPrice();
+                results.push({ name: "gasPrice()", passed: true, message: `${ethers.formatUnits(gasPrice, "gwei")} gwei` });
+            } catch (e: any) {
+                results.push({ name: "gasPrice()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            return results;
+        })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 4. Test Revenue Ratio Precompile
+    // ═══════════════════════════════════════════════════════════════════
+    allResults.push(
+        await testPrecompile("RevenueRatio (0x1004)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.REVENUE_RATIO, ABIS.REVENUE_RATIO, wallet);
+
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}` });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const status = await contract.status();
+                results.push({ name: "status()", passed: true, message: `${status}` });
+            } catch (e: any) {
+                results.push({ name: "status()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const senderR = await contract.senderRatio();
+                const coinbaseR = await contract.coinbaseRatio();
+                const providerR = await contract.providerRatio();
+                const treasuryR = await contract.treasuryRatio();
+                results.push({
+                    name: "ratios()",
+                    passed: true,
+                    message: `sender=${senderR}%, coinbase=${coinbaseR}%, provider=${providerR}%, treasury=${treasuryR}%`,
+                });
+            } catch (e: any) {
+                results.push({ name: "ratios()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            return results;
+        })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 5. Test Treasury Registry Precompile
+    // ═══════════════════════════════════════════════════════════════════
+    allResults.push(
+        await testPrecompile("TreasuryRegistry (0x1005)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.TREASURY_REGISTRY, ABIS.TREASURY_REGISTRY, wallet);
+
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}` });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const treasury = await contract.treasuryAt();
+                results.push({ name: "treasuryAt()", passed: true, message: treasury });
+            } catch (e: any) {
+                results.push({ name: "treasuryAt()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            return results;
+        })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 6. Test Gas Fee Grant Precompile
+    // ═══════════════════════════════════════════════════════════════════
+    allResults.push(
+        await testPrecompile("GasFeeGrant (0x1006)", async () => {
+            const results: TestResult[] = [];
+            const contract = new ethers.Contract(PRECOMPILES.GAS_FEE_GRANT, ABIS.GAS_FEE_GRANT, wallet);
+
+            try {
+                const initialized = await contract.initialized();
+                results.push({ name: "initialized()", passed: true, message: `${initialized}` });
+            } catch (e: any) {
+                results.push({ name: "initialized()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            try {
+                const owner = await contract.owner();
+                results.push({ name: "owner()", passed: true, message: owner });
+            } catch (e: any) {
+                results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
+            }
+
+            // Test isGrantedForProgram with a known address
+            const testGrantee = "0xAe76b11CEcE311717934938510327203a373E826";
+            try {
+                const isGranted = await contract.isGrantedForProgram(testGrantee, ethers.ZeroAddress);
+                results.push({ name: `isGrantedForProgram(${testGrantee.slice(0, 10)}...)`, passed: true, message: `${isGranted}` });
+            } catch (e: any) {
+                results.push({ name: `isGrantedForProgram()`, passed: false, message: e.shortMessage || e.message });
+            }
+
+            // If granted, try to get grant details
+            try {
+                const grant = await contract.grant(testGrantee, ethers.ZeroAddress);
+                if (grant.granter !== ethers.ZeroAddress) {
+                    results.push({
+                        name: "grant() details",
+                        passed: true,
+                        message: `granter=${grant.granter.slice(0, 10)}..., spendLimit=${ethers.formatEther(grant.spendLimit)} ETH`,
+                    });
+                }
+            } catch (e: any) {
+                // Ignore if not granted
+            }
+
+            return results;
+        })
+    );
+
+    // Summary for Suite B
+    let suiteBPassed = 0;
+    let suiteBFailed = 0;
+
+    for (const precompileResult of allResults) {
+        console.log(`\n📦 ${precompileResult.name}`);
+        for (const result of precompileResult.results) {
+            const icon = result.passed ? "✅" : "❌";
+            console.log(`   ${icon} ${result.name}: ${result.message}`);
+            if (result.passed) { suiteBPassed++; passCount++; }
+            else { suiteBFailed++; failCount++; }
+        }
+    }
+
+    console.log("\n" + "═".repeat(70));
+    console.log(`  SUITE B Results: ${suiteBPassed} passed, ${suiteBFailed} failed`);
+    console.log("═".repeat(70));
+}
+
+// ===================== SUITE C: GASPRICE + REVENUE TESTS =====================
+async function runSuiteC(provider: ethers.JsonRpcProvider, admin: Wallet) {
+    // sender — used for revenue split and positive-case txs (clean nonce sequence)
+    const senderKey = process.env.ADMIN2 ?? ethers.Wallet.createRandom().privateKey;
+    const sender = new ethers.Wallet(senderKey, provider);
+
+    // rejectionSender — dedicated wallet for underpriced txs
+    const rejectionSender = ethers.Wallet.createRandom().connect(provider) as unknown as ethers.Wallet;
+
+    // Fixed addresses for treasury and provider so we can track balances
+    const TREASURY = ethers.Wallet.createRandom().connect(provider);
+    const PROVIDER_WALLET = ethers.Wallet.createRandom().connect(provider);
+
+    console.log(`\n👤 Sender:           ${sender.address}`);
+    console.log(`👤 RejectionSender:  ${rejectionSender.address}`);
+    console.log(`🏦 Treasury:         ${TREASURY.address}`);
+    console.log(`🔌 Provider:         ${PROVIDER_WALLET.address}`);
+
+    const ADMIN_GAS = ethers.parseUnits("1000", "gwei");
+    const adminTxOpts = { gasLimit: 500_000n, gasPrice: ADMIN_GAS };
+
+    // Fund sender and rejectionSender if needed
+    {
+        const needsFunding = async (addr: string, threshold: bigint) =>
+            (await provider.getBalance(addr)) < threshold;
+
+        const toFund: { addr: string; label: string }[] = [];
+        if (await needsFunding(sender.address, ethers.parseEther("0.5")))
+            toFund.push({ addr: sender.address, label: "sender" });
+        if (await needsFunding(rejectionSender.address, ethers.parseEther("0.01")))
+            toFund.push({ addr: rejectionSender.address, label: "rejectionSender" });
+
+        if (toFund.length > 0) {
+            section("Funding test wallets");
+            for (const { addr, label } of toFund) {
+                const amount = label === "sender" ? ethers.parseEther("1") : ethers.parseEther("0.1");
+                const tx = await admin.sendTransaction({
+                    to: addr, value: amount,
+                    gasLimit: 21_000n, gasPrice: ADMIN_GAS,
+                });
+                await tx.wait(1);
+                console.log(`  ✅ Funded ${label} (${addr}) with ${ethers.formatEther(amount)} ETH`);
+            }
+        }
+    }
+
+    const gpContract  = new ethers.Contract(GAS_PRICE_ADDR,     GAS_PRICE_ABI,     admin);
+    const rrContract  = new ethers.Contract(REVENUE_RATIO_ADDR, REVENUE_RATIO_ABI, admin);
+    const trContract  = new ethers.Contract(TREASURY_REG_ADDR,  TREASURY_REG_ABI,  admin);
+
+    section("Setup: initialise precompiles");
+
+    {
+        const gpOk = await ensureInit(gpContract, admin.address, adminTxOpts);
+        assertCondition(gpOk, "GasPrice (0x1003) owned by admin");
+
+        const rrOk = await ensureInit(rrContract, admin.address, adminTxOpts);
+        assertCondition(rrOk, "RevenueRatio (0x1004) owned by admin");
+
+        const trOk = await ensureInit(trContract, admin.address, adminTxOpts);
+        assertCondition(trOk, "TreasuryRegistry (0x1005) owned by admin");
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // PART 1 — GasPrice floor enforcement
+    // ───────────────────────────────────────────────────────────────────────
+    section("PART 1 — GasPrice floor enforcement (0x1003)");
+
+    const FLOOR_GWEI = 1_000n; // 1000 gwei
+    const FLOOR_WEI  = ethers.parseUnits(FLOOR_GWEI.toString(), "gwei");
+
+    // 1.1 — Disable revenue ratio so Part 1 is isolated
+    {
+        const rrStatus: boolean = await rrContract.status();
+        if (rrStatus) {
+            const tx = await rrContract.disable(adminTxOpts);
+            await tx.wait(1);
+        }
+    }
+
+    // 1.2 — Set floor and enable
+    console.log(`\n  [1.1] Setting gas price floor to ${FLOOR_GWEI} gwei and enabling...`);
+    {
+        const txPrice = await gpContract.setGasPrice(FLOOR_WEI, adminTxOpts);
+        await txPrice.wait(1);
+        const txEnable = await gpContract.enable(adminTxOpts);
+        await txEnable.wait(1);
+
+        const storedPrice: bigint = await gpContract.gasPrice();
+        const enabled: boolean    = await gpContract.status();
+        assertCondition(storedPrice === FLOOR_WEI, `Stored floor = ${FLOOR_GWEI} gwei`);
+        assertCondition(enabled, "GasPrice precompile enabled");
+    }
+
+    // 1.3 — Tx at exactly floor → must succeed
+    console.log(`\n  [1.2] Sending tx at exactly ${FLOOR_GWEI} gwei (should succeed)...`);
+    {
+        try {
+            const receipt = await sendLegacyTx(provider, sender, admin.address, FLOOR_WEI);
+            assertCondition(receipt?.status === 1, `Tx at floor (${FLOOR_GWEI} gwei) accepted`);
+        } catch (e: any) {
+            assertCondition(false, `Tx at floor rejected unexpectedly: ${e.message?.slice(0, 120)}`);
+        }
+    }
+
+    // 1.4 — Tx at 1 gwei → must be excluded from blocks
+    console.log(`\n  [1.3] Sending tx at 1 gwei — floor is ${FLOOR_GWEI} gwei (should be excluded from blocks)...`);
+    await expectNotMined(provider, rejectionSender, admin.address, ethers.parseUnits("1", "gwei"),
+        "Tx at 1 gwei excluded when floor = 1000 gwei", 1, 90_000);
+
+    // 1.5 — Disable and verify the same 1 gwei tx now passes
+    console.log(`\n  [1.4] Disabling GasPrice precompile, re-sending tx at 1 gwei...`);
+    {
+        const txDisable = await gpContract.disable(adminTxOpts);
+        await txDisable.wait(1);
+        assertCondition(!(await gpContract.status()), "GasPrice precompile disabled");
+
+        try {
+            const receipt = await sendLegacyTx(provider, sender, admin.address, ethers.parseUnits("1", "gwei"));
+            assertCondition(receipt?.status === 1, "Tx at 1 gwei accepted after disabling floor");
+        } catch (e: any) {
+            assertCondition(false, `Tx at 1 gwei still rejected after disable: ${e.message?.slice(0, 120)}`);
+        }
+    }
+
+    // Re-enable at floor for Part 3
+    {
+        const txEnable = await gpContract.enable(adminTxOpts);
+        await txEnable.wait(1);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // PART 2 — Revenue distribution
+    // ───────────────────────────────────────────────────────────────────────
+    section("PART 2 — Revenue distribution (0x1004 + 0x1005)");
+
+    // Ratios: sender=30, coinbase=40, provider=20, treasury=10
+    const SENDER_RATIO   = 30n;
+    const COINBASE_RATIO = 40n;
+    const PROVIDER_RATIO = 20n;
+    const TREASURY_RATIO = 10n;
+
+    // 2.1 — Register treasury and provider
+    console.log(`\n  [2.1] Registering treasury (${TREASURY.address}) and provider (${PROVIDER_WALLET.address})...`);
+    {
+        const txT = await trContract.setTreasury(TREASURY.address, adminTxOpts);
+        await txT.wait(1);
+        const txP = await trContract.setProvider(PROVIDER_WALLET.address, adminTxOpts);
+        await txP.wait(1);
+
+        const storedTreasury: string = await trContract.treasuryAt();
+        const storedProvider: string = await trContract.providerAt();
+        assertCondition(storedTreasury.toLowerCase() === TREASURY.address.toLowerCase(),
+            "Treasury address stored correctly");
+        assertCondition(storedProvider.toLowerCase() === PROVIDER_WALLET.address.toLowerCase(),
+            "Provider address stored correctly");
+    }
+
+    // 2.2 — Set ratios
+    console.log(`\n  [2.2] Setting ratios: sender=${SENDER_RATIO} coinbase=${COINBASE_RATIO} provider=${PROVIDER_RATIO} treasury=${TREASURY_RATIO}...`);
+    {
+        const txRatio = await rrContract.setRevenueRatio(
+            SENDER_RATIO, COINBASE_RATIO, PROVIDER_RATIO, TREASURY_RATIO,
+            adminTxOpts,
+        );
+        await txRatio.wait(1);
+
+        const sr: bigint = await rrContract.senderRatio();
+        const cr: bigint = await rrContract.coinbaseRatio();
+        const pr: bigint = await rrContract.providerRatio();
+        const tr: bigint = await rrContract.treasuryRatio();
+        assertCondition(sr === SENDER_RATIO && cr === COINBASE_RATIO && pr === PROVIDER_RATIO && tr === TREASURY_RATIO,
+            `Ratios stored: sender=${sr} coinbase=${cr} provider=${pr} treasury=${tr}`);
+    }
+
+    // 2.3 — Enable revenue ratio
+    console.log(`\n  [2.3] Enabling RevenueRatio precompile...`);
+    {
+        const txEn = await rrContract.enable(adminTxOpts);
+        await txEn.wait(1);
+        assertCondition(await rrContract.status(), "RevenueRatio enabled");
+    }
+
+    // 2.4 — Send a tx and capture balance deltas
+    console.log(`\n  [2.4] Sending test tx and measuring balance splits...`);
+    {
+        const TX_GAS_LIMIT = 21_000n;
+        const TX_GAS_PRICE = FLOOR_WEI;
+
+        const receipt = await sendLegacyTx(provider, sender, admin.address, TX_GAS_PRICE, TX_GAS_LIMIT);
+        assertCondition(receipt?.status === 1, "Revenue-split tx executed successfully");
+
+        // Use the receipt's block for the ACTUAL coinbase and baseFee.
+        // QBFT rotates proposers per block — capture coinbase from the mined block.
+        const txBlock        = await provider.getBlock(receipt!.blockNumber);
+        const actualCoinbase = txBlock!.miner;
+        const baseFee        = txBlock!.baseFeePerGas ?? 0n;
+
+        // Distributed fee = coinbaseWeiDelta inside distributeRevenue
+        // For legacy txs: (gasPrice - baseFee) * gasUsed
+        const actualDistributedFee = (TX_GAS_PRICE - baseFee) * receipt!.gasUsed;
+
+        // Block-level balance deltas: query at (N-1) and (N) for single-block accuracy
+        const prev = receipt!.blockNumber - 1;
+        const curr = receipt!.blockNumber;
+
+        const balBefore = {
+            coinbase: await provider.getBalance(actualCoinbase, prev),
+            treasury: await provider.getBalance(TREASURY.address, prev),
+            provider: await provider.getBalance(PROVIDER_WALLET.address, prev),
+            sender:   await provider.getBalance(sender.address, prev),
+        };
+        const balAfter = {
+            coinbase: await provider.getBalance(actualCoinbase, curr),
+            treasury: await provider.getBalance(TREASURY.address, curr),
+            provider: await provider.getBalance(PROVIDER_WALLET.address, curr),
+            sender:   await provider.getBalance(sender.address, curr),
+        };
+
+        // Expected shares (integer division — matches distributeRevenue in Java)
+        const senderShare   = actualDistributedFee * SENDER_RATIO   / 100n;
+        const coinbaseShare = actualDistributedFee * COINBASE_RATIO / 100n;
+        const providerShare = actualDistributedFee * PROVIDER_RATIO / 100n;
+        const treasuryShare = actualDistributedFee * TREASURY_RATIO / 100n;
+        const remainder     = actualDistributedFee - senderShare - coinbaseShare - providerShare - treasuryShare;
+
+        console.log(`      Coinbase: ${actualCoinbase}`);
+        console.log(`      Base fee: ${ethers.formatUnits(baseFee, "gwei")} gwei`);
+        console.log(`      Gas used: ${receipt!.gasUsed}`);
+        console.log(`      Distributed fee: ${ethers.formatUnits(actualDistributedFee, "gwei")} gwei`);
+        console.log(`      Expected splits:`);
+        console.log(`        sender  (${SENDER_RATIO}%): ${ethers.formatUnits(senderShare, "gwei")} gwei`);
+        console.log(`        coinbase(${COINBASE_RATIO}%): ${ethers.formatUnits(coinbaseShare + remainder, "gwei")} gwei (inc. dust=${remainder})`);
+        console.log(`        provider(${PROVIDER_RATIO}%): ${ethers.formatUnits(providerShare, "gwei")} gwei`);
+        console.log(`        treasury(${TREASURY_RATIO}%): ${ethers.formatUnits(treasuryShare, "gwei")} gwei`);
+
+        // Coinbase gets coinbaseShare + integer-division remainder (dust)
+        const coinbaseDelta = balAfter.coinbase - balBefore.coinbase;
+        assertCondition(coinbaseDelta === coinbaseShare + remainder,
+            `Coinbase received ${ethers.formatUnits(coinbaseDelta, "gwei")} gwei (expected ${ethers.formatUnits(coinbaseShare + remainder, "gwei")})`);
+
+        const treasuryDelta = balAfter.treasury - balBefore.treasury;
+        assertCondition(treasuryDelta === treasuryShare,
+            `Treasury received ${ethers.formatUnits(treasuryDelta, "gwei")} gwei (expected ${ethers.formatUnits(treasuryShare, "gwei")})`);
+
+        const providerDelta = balAfter.provider - balBefore.provider;
+        assertCondition(providerDelta === providerShare,
+            `Provider received ${ethers.formatUnits(providerDelta, "gwei")} gwei (expected ${ethers.formatUnits(providerShare, "gwei")})`);
+
+        // Sender net cost = full gas paid upfront − cashback received
+        const totalGasCost    = TX_GAS_PRICE * receipt!.gasUsed;
+        const expectedNetCost = totalGasCost - senderShare;
+        const senderNetCost   = balBefore.sender - balAfter.sender;
+        assertCondition(senderNetCost === expectedNetCost,
+            `Sender net cost ${ethers.formatUnits(senderNetCost, "gwei")} gwei (expected ${ethers.formatUnits(expectedNetCost, "gwei")})`);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // PART 3 — Both active simultaneously
+    // ───────────────────────────────────────────────────────────────────────
+    section("PART 3 — GasPrice floor + Revenue split active simultaneously");
+
+    // At this point: floor = 1000 gwei (enabled), revenue ratio enabled
+    // 3.1 — Tx below floor must still be excluded even when revenue ratio is on
+    console.log(`\n  [3.1] Tx at 1 gwei with both enforcement and revenue split active (should be excluded)...`);
+    await expectNotMined(provider, rejectionSender, admin.address, ethers.parseUnits("1", "gwei"),
+        "Tx at 1 gwei excluded even with revenue split active", 1, 90_000);
+
+    // 3.2 — Tx at floor passes and split is applied
+    console.log(`\n  [3.2] Tx at ${FLOOR_GWEI} gwei with both active (should succeed with split)...`);
+    {
+        const receipt = await sendLegacyTx(provider, sender, admin.address, FLOOR_WEI);
+        assertCondition(receipt?.status === 1, "Tx at floor succeeds with both features active");
+
+        const txBlock        = await provider.getBlock(receipt!.blockNumber);
+        const actualCoinbase = txBlock!.miner;
+        const baseFee        = txBlock!.baseFeePerGas ?? 0n;
+        const distributedFee = (FLOOR_WEI - baseFee) * receipt!.gasUsed;
+
+        const prev = receipt!.blockNumber - 1;
+        const curr = receipt!.blockNumber;
+
+        const treasuryBefore = await provider.getBalance(TREASURY.address, prev);
+        const treasuryAfter  = await provider.getBalance(TREASURY.address, curr);
+        const providerBefore = await provider.getBalance(PROVIDER_WALLET.address, prev);
+        const providerAfter  = await provider.getBalance(PROVIDER_WALLET.address, curr);
+
+        const expectedTreasury = distributedFee * TREASURY_RATIO / 100n;
+        const expectedProvider = distributedFee * PROVIDER_RATIO / 100n;
+
+        assertCondition(treasuryAfter - treasuryBefore === expectedTreasury,
+            `Treasury split correct (${ethers.formatUnits(treasuryAfter - treasuryBefore, "gwei")} gwei)`);
+        assertCondition(providerAfter - providerBefore === expectedProvider,
+            `Provider split correct (${ethers.formatUnits(providerAfter - providerBefore, "gwei")} gwei)`);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // CLEANUP — leave GasPrice enabled at floor, disable revenue ratio
+    // (so other tests/scripts are not affected)
+    // ───────────────────────────────────────────────────────────────────────
+    {
+        const txClean = await rrContract.disable(adminTxOpts);
+        await txClean.wait(1);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Suite C Summary
+    // ───────────────────────────────────────────────────────────────────────
+    console.log(`\n${"═".repeat(70)}`);
+    console.log(`  SUITE C Summary`);
+    if (failures.length > 0) {
+        console.log(`\n  Failed assertions:`);
+        failures.forEach(f => console.log(`    ✗ ${f}`));
+    }
+    console.log(`${"═".repeat(70)}\n`);
 }
 
 main()

@@ -29,7 +29,7 @@ const ABIS = {
         "function owner() view returns (address)",
         "function initialized() view returns (bool)",
         "function initializeOwner(address owner) returns (bool)",
-        "function totalSupply() view returns (uint256)",
+        "function totalsupply() view returns (uint256)",
         "function mint(address to, uint256 value) returns (bool, string)",
     ],
     ADDRESS_REGISTRY: [
@@ -55,7 +55,7 @@ const ABIS = {
         "function initialized() view returns (bool)",
         "function initializeOwner(address owner) returns (bool)",
         "function status() view returns (bool)",
-        "function contractRatio() view returns (uint256)",
+        "function senderRatio() view returns (uint256)",
         "function coinbaseRatio() view returns (uint256)",
         "function providerRatio() view returns (uint256)",
         "function treasuryRatio() view returns (uint256)",
@@ -158,12 +158,12 @@ async function main() {
                 results.push({ name: "owner()", passed: false, message: e.shortMessage || e.message });
             }
 
-            // Test totalSupply (if available)
+            // Test totalsupply() using the Java precompile selector name
             try {
-                const supply = await contract.totalSupply();
-                results.push({ name: "totalSupply()", passed: true, message: `${ethers.formatEther(supply)} ETH`, details: supply });
+                const supply = await contract.totalsupply();
+                results.push({ name: "totalsupply()", passed: true, message: `${ethers.formatEther(supply)} ETH`, details: supply });
             } catch (e: any) {
-                results.push({ name: "totalSupply()", passed: false, message: e.shortMessage || e.message });
+                results.push({ name: "totalsupply()", passed: false, message: e.shortMessage || e.message });
             }
 
             return results;
@@ -274,14 +274,14 @@ async function main() {
             }
 
             try {
-                const contractR = await contract.contractRatio();
+                const senderR = await contract.senderRatio();
                 const coinbaseR = await contract.coinbaseRatio();
                 const providerR = await contract.providerRatio();
                 const treasuryR = await contract.treasuryRatio();
                 results.push({
                     name: "ratios()",
                     passed: true,
-                    message: `contract=${contractR}%, coinbase=${coinbaseR}%, provider=${providerR}%, treasury=${treasuryR}%`,
+                    message: `sender=${senderR}%, coinbase=${coinbaseR}%, provider=${providerR}%, treasury=${treasuryR}%`,
                 });
             } catch (e: any) {
                 results.push({ name: "ratios()", passed: false, message: e.shortMessage || e.message });

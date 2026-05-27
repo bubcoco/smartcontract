@@ -1,0 +1,204 @@
+[dotenv@17.2.3] injecting env (6) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+╔════════════════════════════════════════════════════════════════════╗
+║            Fee Grant Core Impact Test                             ║
+╚════════════════════════════════════════════════════════════════════╝
+
+🔑 Admin: 0xf17f52151EbEF6C7334FAD080c5704D77216b732
+🏭 Factory: 0x1211d530a993A1a8B7C379A5363122c8091fA193
+📄 Precompile: 0x0000000000000000000000000000000000001006
+   initialized(): true
+   owner(): 0xf17f52151EbEF6C7334FAD080c5704D77216b732
+
+── Test 1: Normal Transfer (No Grant) ──
+   ✅ PASS: Sender paid gas (balance decreased more than transfer) — Diff: 0.031 ETH
+
+── Test 2: Contract Call (No Grant) ──
+   ✅ PASS: Sender paid gas for contract call — Gas cost: 0.664704 ETH
+
+── Test 3: Grant Active → Contract Call ──
+   🔎 test3 granted contract call: estimatedGas=671147 bufferedGasLimit=805376
+   🔎 test3 granted contract call: tx=0x8da836e479a859af95fa2a4e52380d21fb923baa2ccbfd1da96dd47aadaa7a64 nonce=1 gasLimit=805376
+   🔎 test3 granted contract call: mined in block 1180, status=1, waited=4.0s
+   ✅ PASS: Grantee balance unchanged (gas covered by grant)
+   ✅ PASS: Granter balance decreased (paid for gas) — Diff: 0.664704 ETH
+
+── Test 4: Revoke Grant → Retry Tx ──
+   ✅ PASS: Grant successfully revoked
+   ✅ PASS: After revoke, sender pays gas — Gas cost: 0.664704 ETH
+
+── Test 5: Expired Grant → Fallback to Sender ──
+   ✅ PASS: Expired grant: sender paid gas (fallback) — Gas cost: 0.664692 ETH
+
+── Test 6: Grant Exceeds Spend Limit → Fallback to Sender ──
+   ✅ PASS: Spend limit exceeded: sender paid gas (fallback) — Gas cost: 0.66468 ETH
+
+── Test 7: Granter Insufficient Balance → Fallback to Sender ──
+   ✅ PASS: Poor granter: sender paid gas (fallback) — Gas cost: 0.664752 ETH
+
+── Test 8: Multiple Blocks Sequential Stability ──
+   ✅ PASS: Block production stable — Blocks 1197 → 1208 (11 new blocks)
+
+── Test 9: Coinbase Receives Fees ──
+   Coinbase: 0x288f096a31255a5a67053f7A2E70dD47E866c2D8
+   ✅ PASS: Coinbase balance did not decrease — Before: 16.603203744951452735, After: 16.624203744951305735
+
+── Test 10: Fresh Address Cannot Re-Initialize Owner ──
+   ✅ PASS: initializeOwner rejected (already initialized) — Owner unchanged: 0xf17f52151EbEF6C7334FAD080c5704D77216b732
+
+── Test 11: Fresh Address Cannot setFeeGrant ──
+   ✅ PASS: setFeeGrant rejected from non-owner — Grant not created
+
+── Test 12: Fresh Address Cannot revokeFeeGrant ──
+   ✅ PASS: revokeFeeGrant rejected from non-owner — Grant still active
+
+── Test 13: Fresh Address Cannot transferOwnership ──
+   ✅ PASS: transferOwnership rejected from non-owner — Owner unchanged: 0xf17f52151EbEF6C7334FAD080c5704D77216b732
+
+── Test 14: Fresh Address Cannot Steal via initializeOwner + transferOwnership ──
+   ✅ PASS: Ownership attack failed — Owner still: 0xf17f52151EbEF6C7334FAD080c5704D77216b732
+
+── Test 15: Dual Program Grant — Spend Exceeds First Program ──
+   Counter A: 0x8e352b34dCC494E10003080b5a1CD38fEF4aBA53
+   Counter B: 0xDd7a090a85fFA72f3dAd70B4B74b40FB795DDfbE
+   ✅ PASS: Both grants created
+   ✅ PASS: Phase 1: Counter A — granter paid gas — Granter: -0.044462 ETH
+   Spamming Counter A to deplete grant (0.12 ETH limit)...
+   📋 Grant A configured spendLimit: 0.075538 ETH
+   ✅ PASS: Grant A exhausted for current tx pricing — Processor fell back to sender payment
+   ✅ PASS: Phase 3: Counter A after depletion — sender pays gas (fallback) — User: -0.027362 ETH
+   ✅ PASS: Phase 4: Counter B — granter paid (Grant B unaffected by A's depletion) — Granter: -0.044462 ETH
+   📋 Grant B remaining: spendLimit=9.955538 ETH
+
+── Test 16: Wildcard Grant — Zero Balance Multicall ──
+   Wallet: 0x2afF220e9378d78B57a239de70b671728EDBcD83 (balance: 0.0 ETH)
+   Counter: 0x6b7d23446E5c9f7Ec931554B8fDD7CbE9660b04f
+   ✅ PASS: Wildcard granted to zero-balance wallet
+   ✅ PASS: Wildcard: native transfer (0 value) — granter paid
+   ✅ PASS: Wildcard: contract call (Counter.inc) — granter paid
+   ✅ PASS: Wildcard: contract creation — granter paid — Deployed at: 0x5a38fD01009e9AcECdf7f4c5dEb81f74C080E647
+   ✅ PASS: Wildcard: ERC20 mint via factory — granter paid
+   📋 Granter spent: 0.867179 ETH
+   📋 Wallet balance still: 0.0 ETH
+   ✅ PASS: Granter paid for all wildcard operations
+   ✅ PASS: Wildcard revoked successfully
+   Retrying operations after revoke (expect failures)...
+   ✅ PASS: Post-revoke: transfer correctly rejected (insufficient funds)
+   ✅ PASS: Post-revoke: contract call correctly rejected
+   ✅ PASS: Post-revoke verification complete — wildcard fully revoked
+
+── Test 17: Wildcard Lazy Cleanup — Poor Granter ──
+   ✅ PASS: Lazy cleanup fallback charged sender — User paid: 0.021 ETH
+   ✅ PASS: Below-threshold owner did not pay after lazy cleanup trigger
+   ✅ PASS: Wildcard grant cleared lazily on first attempted use
+   🔄 Admin balance restored to 90000.455344 ETH via NativeMinter
+
+── Test 18: Wildcard Cleanup Persists Across Follow-up Tx ──
+   ✅ PASS: Follow-up tx paid by sender after cleanup persisted — Gas cost: 0.021 ETH
+
+── Test 19: Wildcard Lazy Cleanup Is Per-Grantee ──
+   ✅ PASS: Grantee A wildcard cleared
+   ✅ PASS: Grantee B wildcard remains active
+   ✅ PASS: Unaffected grantee still uses wildcard sponsorship
+
+── Test 20: Fresh Zero-Balance Sender Uses Grant Across Tx Types ──
+   ✅ PASS: Setup: fresh sender starts with zero balance
+   ✅ PASS: Sanity check without grant rejected for zero-balance sender
+   ✅ PASS: Setup: both zero-balance sender grants created
+   🔎 test20 factory createERC20: tx=0x6c2f141a07c2bad31c15d8950b5cc1f22c5798120b63258bd4753c337c6ac98f nonce=1 gasLimit=5000000
+   🔎 test20 factory createERC20: mined in block 1273, status=1, waited=7.9s
+   ✅ PASS: Zero-balance sender deployed ERC20 via grant
+   🔎 test20 counter interaction: tx=0x44c94d6a913e41fa6af02fad7ddb93b6c0e4aaad251be52487fb8a276c839168 nonce=2 gasLimit=100000
+   🔎 test20 counter interaction: mined in block 1274, status=1, waited=3.9s
+   ✅ PASS: Zero-balance sender called target contract via grant
+   ✅ PASS: Zero-balance sender stayed unfunded while using grant
+   ✅ PASS: Granter paid for zero-balance sender operations — Diff: 0.709166 ETH
+   ✅ PASS: Test 20 / Factory grant accounting decremented — spendLimit: 1000.0 -> 999.335296 ETH
+   ✅ PASS: Test 20 / Counter grant accounting decremented — spendLimit: 1000.0 -> 999.955538 ETH
+
+── Test 21: Unlimited Spend Limit (spendLimit=0) ──
+   ✅ PASS: Unlimited grant created with spendLimit=0, allowance=1
+   🔎 test21 tx1 unlimited sponsored: tx=0xfd207ad3049ff1cea640dca47a8ac25212cd81f0e6e23c73f79b7563f2cde3ac nonce=1 gasLimit=5000000
+   🔎 test21 tx1 unlimited sponsored: mined in block 1278, status=1, waited=3.9s
+   ✅ PASS: Unlimited grant: first tx sponsored
+   🔎 test21 tx2 unlimited sponsored: tx=0x8d8a2557728c84af6215393c0cb4fa2a5b6e5f8356405b06ea9f3f52148f8263 nonce=2 gasLimit=5000000
+   🔎 test21 tx2 unlimited sponsored: mined in block 1279, status=1, waited=4.0s
+   ✅ PASS: Unlimited grant: second tx sponsored without exhaustion
+   ✅ PASS: Unlimited grant: granter paid for both txs — Spent: 1.312308 ETH
+   ✅ PASS: Unlimited grant: grantee balance remains zero
+   ✅ PASS: Unlimited grant: spendLimit remains 0 after multiple uses
+
+── Test 22: transferOwnership → New Owner Can Create Fee Grants ──
+   ✅ PASS: Ownership transferred to newOwner — 0x146024396a181c8c7038afa5d5aFDE96101872ef
+   ✅ PASS: Old owner correctly rejected from setFeeGrant after ownership transfer
+   ✅ PASS: New owner successfully created a fee grant
+   ✅ PASS: Grant record shows newOwner as granter — 0x146024396a181c8c7038afa5d5aFDE96101872ef
+   🔎 test22 sponsored via new-owner grant: tx=0x2a1b020f1bc932560d01ab65a01b319e55b734e7176d4ec358637ce5947ca50c nonce=1 gasLimit=5000000
+   🔎 test22 sponsored via new-owner grant: mined in block 1285, status=1, waited=3.9s
+   ✅ PASS: Grantee tx sponsored by new owner's grant
+   ✅ PASS: New owner paid gas for sponsored grantee tx — Spent: 0.66468 ETH
+   ✅ PASS: Admin ownership restored after test
+
+── Test 23: grant() View Function Returns Correct Field Values ──
+   ✅ PASS: grant().granter matches admin address
+   ✅ PASS: grant().allowance = 2 (period grant with period/periodLimit set)
+   ✅ PASS: grant().spendLimit matches configured value — 42.0 ETH
+   ✅ PASS: grant().periodLimit matches configured value — 7.0 ETH
+   ✅ PASS: grant().periodCanSpend = periodLimit (fresh grant, no spend yet)
+   ✅ PASS: grant().startTime > 0 (recorded) — block 1288
+   ✅ PASS: grant().endTime matches configured endTime — block 2287
+   ✅ PASS: grant().latestTransaction = startTime (grant creation block)
+   ✅ PASS: grant().period matches configured period — 3600s
+   ✅ PASS: isGrantedForProgram() = true after setFeeGrant
+   ✅ PASS: isExpired() = false for non-expired grant
+
+── Test 24: Period Limit Enforcement ──
+   ✅ PASS: Period limit set to 1 wei — periodCanSpend=1
+   🔎 test24 tx1 (period limit): tx=0x714389eb9a196cd1afa5214a49c9add8bd07098309315c711c0bc6eebe89bd3f nonce=1 gasLimit=5000000
+   🔎 test24 tx1 (period limit): mined in block 1292, status=1, waited=3.9s
+   ✅ PASS: Period limit: grantee paid for tx as period limit was immediately exceeded
+   Granter diff: 0.0 ETH
+   Grantee diff: 0.664704 ETH
+   ❌ FAIL: periodCanSpend should be 0 after exceeding 1-wei period limit — Got: 1
+   🔎 test24 tx2 (after period exhaustion): tx=0x3ab691f8124e957151b428405d2cd6f381587cff7d1d0e3152e6aa1c65560d40 nonce=2 gasLimit=5000000
+   🔎 test24 tx2 (after period exhaustion): mined in block 1293, status=1, waited=3.8s
+   ✅ PASS: Period limit: grantee paid for second tx after period exhaustion — Grantee cost: 0.647604 ETH
+
+── Test 25: Multiple Grantees Same Granter — Revoke One, Other Unaffected ──
+   ✅ PASS: Setup: both grantees start with zero balance
+   ✅ PASS: Both grantees granted by same granter
+   ✅ PASS: Grantee A revoked successfully
+   ✅ PASS: Grantee B unaffected by revocation of grantee A
+   ✅ PASS: Revoked grantee A correctly rejected (zero balance, no grant)
+   🔎 test25 active grantee B tx: tx=0x7e725d74bfb67a357030c7d88c9a2928026610d81d7a30c25e7b2e49be523f93 nonce=1 gasLimit=5000000
+   🔎 test25 active grantee B tx: mined in block 1298, status=1, waited=4.8s
+   ✅ PASS: Active grantee B successfully sponsored after A's revocation
+   ✅ PASS: Granter paid for grantee B's tx — Spent: 0.664632 ETH
+   ✅ PASS: Grantee A balance stays zero (correctly rejected)
+   ✅ PASS: Grantee B balance stays zero (grant covered gas)
+
+── Test 26: Scoped Grant for Native ETH Transfer ──
+   ✅ PASS: Setup: grantee has zero balance
+   ✅ PASS: Scoped grant to ZeroAddress created
+   ✅ PASS: Scoped ZeroAddress grant: native transfer broadcast succeeded
+   ✅ PASS: Native transfer gas paid by granter via ZeroAddress scoped grant — Spent: 0.021 ETH
+   ✅ PASS: Grantee balance remains zero after sponsored native transfer
+   ✅ PASS: ZeroAddress-scoped grant does not cover other program addresses
+
+── Test 27: Re-Grant After Revoke Works Correctly ──
+   ✅ PASS: Re-grant phase 1: initial grant active — allowance=2
+   ✅ PASS: Re-grant phase 2: grant revoked
+   ✅ PASS: Re-grant phase 3: grant active again after revoke+re-grant — allowance=2
+   ✅ PASS: Re-grant phase 3: new spendLimit reflects re-grant parameters — 99.0 ETH
+   🔎 test27 re-granted sponsored tx: tx=0xaf82d9d92a6859d3c293c69058d8d422258f224a333330a3ad83f265a6a27256 nonce=1 gasLimit=5000000
+   🔎 test27 re-granted sponsored tx: mined in block 1306, status=1, waited=3.9s
+   ✅ PASS: Re-grant phase 4: tx sponsored under re-grant
+   ✅ PASS: Re-grant: granter paid for sponsored tx — Spent: 0.664644 ETH
+   ✅ PASS: Re-grant: grantee balance remains zero
+   ✅ PASS: Re-grant: spendLimit decremented after use — 98.335356 ETH remaining
+
+════════════════════════════════════════════════════════════════════
+📊 Results: 97 PASSED, 1 FAILED
+════════════════════════════════════════════════════════════════════
+
+⚠️  Some tests failed. Review output above.
+

@@ -106,6 +106,7 @@ async function main() {
     const abi = [
         "function owner() view returns (address)",
         "function initialized() view returns (bool)",
+        "function initializeOwner(address) returns (bool)",
         "function status() view returns (bool)",
         "function gasPrice() view returns (uint256)",
         "function enable() returns (bool)",
@@ -117,12 +118,21 @@ async function main() {
 
     // Get current status and gas price
     const status = await precompile.status();
-    const owner = await precompile.owner();
+    let owner = await precompile.owner();
     const currentGasPrice = await precompile.gasPrice();
 
     console.log(`📊 Current Status: ${status ? "ENABLED ✅" : "DISABLED ❌"}`);
     console.log(`💰 Current Gas Price: ${ethers.formatUnits(currentGasPrice, "gwei")} gwei`);
     console.log(`👤 Owner: ${owner}`);
+
+    if (owner === "0x0000000000000000000000000000000000000000") {
+        console.log("\n⚠️ Owner is 0x0000000000000000000000000000000000000000. Initializing...");
+        const txOpts = { gasLimit: 500000n, gasPrice: ethers.parseUnits("1000", "gwei") };
+        const tx = await precompile.initializeOwner(wallet.address, txOpts);
+        await tx.wait(1);
+        owner = await precompile.owner();
+        console.log(`✅ Initialized! New Owner: ${owner}`);
+    }
 
     if (owner.toLowerCase() !== wallet.address.toLowerCase()) {
         console.log("\n❌ You are not the owner! Cannot proceed.");

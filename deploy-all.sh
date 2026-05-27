@@ -63,8 +63,8 @@ deploy_contract() {
     
     print_info "Deploying ${module_name}..."
     
-    # Run ignition deploy with delayed confirmation
-    if output=$( (sleep 5; echo "y") | npx hardhat ignition deploy "${MODULES_DIR}/${module_file}.ts" --network ${NETWORK} 2>&1); then
+    # Answer Ignition's confirmation prompt immediately instead of sleeping
+    if output=$(printf 'y\n' | npx hardhat ignition deploy "${MODULES_DIR}/${module_file}.ts" --network "${NETWORK}" 2>&1); then
         echo "$output"
         print_success "${module_name} deployed successfully!"
         return 0
